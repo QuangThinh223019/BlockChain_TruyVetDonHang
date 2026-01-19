@@ -1,0 +1,30 @@
+{
+  "name": "order-tracking-database",
+  "version": "1.0.0",
+  "description": "MongoDB & Integration Layer for Order Tracking System",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ../integration/blockchainListener.js",
+    "dev": "nodemon ../integration/blockchainListener.js",
+    "listener": "node ../integration/blockchainListener.js",
+    "setup:db": "node scripts/setupDatabase.js",
+    "seed:db": "node scripts/seedDatabase.js",
+    "index:db": "node scripts/createIndexes.js"
+  },
+  "keywords": [
+    "mongodb",
+    "database",
+    "order-tracking"
+  ],
+  "author": "Your Team",
+  "license": "MIT",
+  "dependencies": {
+    "mongoose": "^7.5.0",
+    "ethers": "^6.0.0",
+    "dotenv": "^16.3.1",
+    "ipfs-http-client": "^60.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
