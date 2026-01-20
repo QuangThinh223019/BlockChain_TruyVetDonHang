@@ -13,26 +13,24 @@ async function main() {
   console.log(`📍 Deploying with account: ${deployer.address}`);
 
   // Lấy balance
-  const balance = await deployer.getBalance();
-  console.log(`💰 Account balance: ${hre.ethers.utils.formatEther(balance)} ETH`);
+  const balance = await deployer.provider.getBalance(deployer.address);
+  console.log(`💰 Account balance: ${hre.ethers.formatEther(balance)} ETH`);
 
   // Deploy contract
   const OrderTracking = await hre.ethers.getContractFactory("OrderTracking");
   const contract = await OrderTracking.deploy();
 
-  await contract.deployed();
+  await contract.waitForDeployment();
 
-  console.log("✅ OrderTracking deployed to:", contract.address);
+  console.log("✅ OrderTracking deployed to:", await contract.getAddress());
 
   // Lưu địa chỉ contract
   const deploymentInfo = {
     network: hre.network.name,
     contract: "OrderTracking",
-    address: contract.address,
+    address: await contract.getAddress(),
     deployer: deployer.address,
-    timestamp: new Date().toISOString(),
-    txHash: contract.deployTransaction.hash,
-    blockNumber: contract.deployTransaction.blockNumber
+    timestamp: new Date().toISOString()
   };
 
   console.log("\n📄 Deployment Info:");
@@ -58,12 +56,15 @@ async function main() {
   // Verify on Etherscan (nếu không phải localhost)
   if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
     console.log("\n⏳ Waiting for block confirmations...");
-    await contract.deployTransaction.wait(6);
+    const deployTx = await contract.deploymentTransaction();
+    if (deployTx) {
+      await deployTx.wait(6);
+    }
 
     console.log("🔍 Verifying contract on Etherscan...");
     try {
       await hre.run("verify:verify", {
-        address: contract.address,
+        address: await contract.getAddress(),
         constructorArguments: []
       });
       console.log("✅ Contract verified on Etherscan!");

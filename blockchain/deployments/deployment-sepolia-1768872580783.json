@@ -1,0 +1,7 @@
+{
+  "network": "sepolia",
+  "contract": "OrderTracking",
+  "address": "0x7fbc28d4131FA320236AaB85DD00B3EF95d5A9Cf",
+  "deployer": "0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a",
+  "timestamp": "2026-01-20T01:29:40.783Z"
+}
