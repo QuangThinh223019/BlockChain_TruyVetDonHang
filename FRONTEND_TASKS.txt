@@ -1,0 +1,513 @@
+================================================================================
+FRONTEND DEVELOPER - REACT + ETHERS.JS TASK LIST
+Project: Blockchain Order Tracking - Truy Vết Đơn Hàng
+Date: 2026-01-20
+================================================================================
+
+📋 PHASE 1: SETUP & ENVIRONMENT
+================================================================================
+
+[ ] 1.1 - Tạo React project (Vite)
+    Command: npm create vite@latest frontend -- --template react
+    
+[ ] 1.2 - Install packages
+    npm install ethers react-router-dom axios zustand
+    npm install -D tailwindcss postcss autoprefixer
+    
+[ ] 1.3 - Create folder structure
+    src/
+      ├── components/
+      │   ├── ConnectWallet/
+      │   ├── CreateOrder/
+      │   ├── OrderDetail/
+      │   ├── OrderList/
+      │   ├── OrderHistory/
+      │   └── TransactionStatus/
+      ├── hooks/
+      │   ├── useContract.js
+      │   ├── useAccount.js
+      │   └── useOrder.js
+      ├── services/
+      │   ├── contractService.js
+      │   └── apiService.js
+      ├── contracts/
+      │   └── OrderTracking.json (ABI)
+      ├── utils/
+      │   ├── web3Utils.js
+      │   ├── formatters.js
+      │   └── constants.js
+      ├── pages/
+      │   ├── Dashboard.jsx
+      │   ├── CreateOrderPage.jsx
+      │   ├── TrackingPage.jsx
+      │   └── AdminPanel.jsx
+      ├── App.jsx
+      └── main.jsx
+
+[ ] 1.4 - Copy ABI file
+    Source: blockchain/artifacts/contracts/OrderTracking.sol/OrderTracking.json
+    Destination: frontend/src/contracts/OrderTracking.json
+
+[ ] 1.5 - Setup environment variables
+    Create: frontend/.env.local
+    Content:
+      VITE_CONTRACT_ADDRESS=0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+      VITE_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
+      VITE_CHAIN_ID=11155111
+
+
+📋 PHASE 2: CORE HOOKS & UTILITIES
+================================================================================
+
+[ ] 2.1 - Create useContract hook
+    File: src/hooks/useContract.js
+    Functions:
+      - connectWallet(): Promise<boolean>
+      - disconnectWallet(): void
+      - getProvider(): ethers.Provider
+      - getSigner(): ethers.Signer
+      - getContract(): ethers.Contract
+      - getChainId(): number
+      - switchNetwork(): Promise<void>
+    Returns: { provider, signer, contract, account, connected, connectWallet, ... }
+
+[ ] 2.2 - Create useAccount hook
+    File: src/hooks/useAccount.js
+    Functions:
+      - getCurrentAddress(): string
+      - getBalance(): Promise<string>
+      - watchAccountChange(): void
+      - watchNetworkChange(): void
+    Returns: { address, balance, chainId, isConnected }
+
+[ ] 2.3 - Create useOrder hook
+    File: src/hooks/useOrder.js
+    Functions:
+      - createOrder(orderId, metadataHash): Promise<{tx, receipt}>
+      - getOrder(orderId): Promise<Order>
+      - updateOrderStatus(orderId, newStatus, detailsHash): Promise<{tx, receipt}>
+      - getOrderHistory(orderId): Promise<StatusUpdate[]>
+      - cancelOrder(orderId): Promise<{tx, receipt}>
+    Returns: { createOrder, getOrder, updateOrderStatus, ... }
+
+[ ] 2.4 - Create Web3 Utils
+    File: src/utils/web3Utils.js
+    Functions:
+      - truncateAddress(address): string
+      - isValidAddress(address): boolean
+      - formatBalance(balance): string
+      - formatDate(timestamp): string
+      - getEtherscanUrl(txHash, chainId): string
+      - getNetworkName(chainId): string
+
+[ ] 2.5 - Create Constants
+    File: src/utils/constants.js
+    Content:
+      - CONTRACT_ADDRESS
+      - RPC_URLS (by network)
+      - CHAIN_IDS
+      - ORDER_STATUSES
+      - GAS_LIMITS
+      - ETHERSCAN_URLS
+
+
+📋 PHASE 3: COMPONENTS
+================================================================================
+
+[ ] 3.1 - ConnectWallet Component
+    File: src/components/ConnectWallet/ConnectWallet.jsx
+    Features:
+      - Nút "Connect MetaMask" / "Disconnect"
+      - Hiển thị address (truncated)
+      - Hiển thị balance
+      - Network badge
+      - Error handling
+    Props: None
+    State: address, balance, chainId, loading
+
+[ ] 3.2 - CreateOrder Component
+    File: src/components/CreateOrder/CreateOrder.jsx
+    Features:
+      - Input field: Order ID
+      - Input field: Metadata Hash (IPFS)
+      - Button submit
+      - Loading state
+      - Error message
+      - Success notification
+    Props: onOrderCreated (callback)
+    State: orderId, metadataHash, loading, error
+
+[ ] 3.3 - OrderDetail Component
+    File: src/components/OrderDetail/OrderDetail.jsx
+    Features:
+      - Search input: Order ID
+      - Display order info:
+        * ID
+        * Status
+        * Created time
+        * Metadata hash
+        * Admin address
+      - Button: Update status
+      - Button: Cancel order
+    Props: orderId (optional)
+    State: order, loading, error
+
+[ ] 3.4 - OrderList Component
+    File: src/components/OrderList/OrderList.jsx
+    Features:
+      - Table of orders
+      - Columns: ID, Status, Created, Actions
+      - Search/Filter
+      - Pagination
+      - Link to detail page
+    Props: orders (array)
+    State: filteredOrders, currentPage
+
+[ ] 3.5 - OrderHistory Component
+    File: src/components/OrderHistory/OrderHistory.jsx
+    Features:
+      - Timeline view
+      - Status badges
+      - Timestamps
+      - Updated by address
+      - Expand details
+    Props: orderId
+    State: history, loading
+
+[ ] 3.6 - TransactionStatus Component
+    File: src/components/TransactionStatus/TransactionStatus.jsx
+    Features:
+      - TX hash display (clickable)
+      - Status badge (pending/confirmed/failed)
+      - Link to Etherscan
+      - Copy tx hash button
+      - Gas used (if confirmed)
+    Props: txHash, status, chainId
+    State: status updates
+
+
+📋 PHASE 4: PAGES & LAYOUT
+================================================================================
+
+[ ] 4.1 - App.jsx (Main Router)
+    Structure:
+      - Navigation bar
+      - Router setup
+      - Routes:
+        * / → Dashboard
+        * /create → Create Order
+        * /tracking → Order Tracking
+        * /orders/:id → Order Detail
+        * /admin → Admin Panel (protected)
+      - Footer
+
+[ ] 4.2 - Dashboard Page
+    File: src/pages/Dashboard.jsx
+    Features:
+      - Connect wallet section (if not connected)
+      - Quick stats:
+        * Total orders (from API)
+        * Pending orders
+        * Completed orders
+      - Recent orders table
+      - Quick action buttons
+    API Calls: GET /api/orders/stats, GET /api/orders?limit=5
+
+[ ] 4.3 - Create Order Page
+    File: src/pages/CreateOrderPage.jsx
+    Features:
+      - Full form for order creation
+      - Fields:
+        * Order ID (auto-generate or manual)
+        * Metadata (JSON editor or file upload)
+        * Metadata hash (auto-calculate or paste)
+      - Preview metadata
+      - Estimated gas
+      - Submit button
+      - Success confirmation with tx link
+
+[ ] 4.4 - Order Tracking Page
+    File: src/pages/TrackingPage.jsx
+    Features:
+      - Search bar (Order ID)
+      - Order detail display
+      - Status timeline
+      - History log
+      - Action buttons (Update status, Cancel)
+      - Share order link
+
+[ ] 4.5 - Admin Panel Page (Optional)
+    File: src/pages/AdminPanel.jsx
+    Features:
+      - Authorize/revoke admin access
+      - View all orders
+      - System statistics
+      - Event logs
+      - Network settings
+
+
+📋 PHASE 5: UTILITIES & SERVICES
+================================================================================
+
+[ ] 5.1 - Contract Service
+    File: src/services/contractService.js
+    Functions:
+      - createOrder(contract, signer, orderId, metadataHash)
+      - getOrder(contract, orderId)
+      - updateOrderStatus(contract, signer, orderId, status, details)
+      - getOrderHistory(contract, orderId)
+      - cancelOrder(contract, signer, orderId)
+    Error handling + retry logic
+
+[ ] 5.2 - API Service (Axios)
+    File: src/services/apiService.js
+    Endpoints:
+      - GET /api/orders → list all orders
+      - POST /api/orders → create order (backend)
+      - GET /api/orders/:id → get order detail
+      - PUT /api/orders/:id → update order
+      - GET /api/orders/:id/history → get history
+      - GET /api/stats → get statistics
+    Error interceptors + token management
+
+[ ] 5.3 - Notifications System
+    File: src/utils/notifications.js
+    Functions:
+      - showSuccess(message)
+      - showError(message)
+      - showWarning(message)
+      - showInfo(message)
+      - showTxConfirm(txHash, chainId)
+    Implementation: react-toastify or sonner
+
+[ ] 5.4 - Storage Utilities
+    File: src/utils/storage.js
+    Functions:
+      - saveToLocalStorage(key, value)
+      - getFromLocalStorage(key)
+      - clearStorage()
+    Uses: User preferences, tx history
+
+
+📋 PHASE 6: STYLING & UX
+================================================================================
+
+[ ] 6.1 - Setup Tailwind CSS
+    Configuration: tailwind.config.js
+    Theme customization (colors, spacing)
+
+[ ] 6.2 - Global Styles
+    File: src/styles/globals.css
+    Variables: colors, fonts, animations
+    
+[ ] 6.3 - Responsive Design
+    - Mobile: 320px+
+    - Tablet: 768px+
+    - Desktop: 1024px+
+    - Large: 1280px+
+
+[ ] 6.4 - Component Styling
+    - Connect Wallet: button states (connected/disconnected)
+    - Form components: input states (focus, error, disabled)
+    - Tables: sorting, row hover effects
+    - Modals: overlay, animations
+    - Cards: shadows, hover effects
+
+[ ] 6.5 - Loading States
+    - Skeleton loaders
+    - Spinner component
+    - Disabled buttons during loading
+
+[ ] 6.6 - Empty States
+    - No orders message
+    - No results message
+    - Guide/help text
+
+[ ] 6.7 - Dark Mode (Optional)
+    Implementation: Tailwind dark mode + context provider
+
+
+📋 PHASE 7: TESTING & DEPLOYMENT
+================================================================================
+
+[ ] 7.1 - Unit Tests
+    Framework: Vitest
+    Tests for:
+      - useContract hook
+      - useAccount hook
+      - useOrder hook
+      - Utility functions
+      - Services
+
+[ ] 7.2 - Integration Tests
+    Framework: React Testing Library
+    Tests for:
+      - ConnectWallet component
+      - CreateOrder flow
+      - Order detail display
+
+[ ] 7.3 - E2E Tests (Optional)
+    Framework: Cypress
+    Test scenarios:
+      - Connect wallet → Create order → View order
+      - Update order status
+      - Search order
+
+[ ] 7.4 - Deploy to Vercel
+    Steps:
+      1. Push to GitHub
+      2. Connect GitHub repo to Vercel
+      3. Configure environment variables
+      4. Deploy
+
+[ ] 7.5 - Setup CI/CD
+    GitHub Actions workflow:
+      - Run tests on push
+      - Build verification
+      - Auto-deploy on main branch
+
+
+🎯 PRIORITY ORDER (MVP FIRST)
+================================================================================
+
+🔴 CRITICAL (Must have):
+  1. useContract hook (MetaMask connection)
+  2. ConnectWallet component
+  3. CreateOrder component
+  4. OrderDetail component  
+  5. App.jsx + Router setup
+  6. Basic styling (Tailwind)
+
+🟡 HIGH (Should have):
+  7. OrderList component
+  8. OrderHistory component
+  9. API service integration
+  10. Notifications system
+  11. Dashboard page
+  12. Tracking page
+
+🟢 NICE-TO-HAVE (Could have):
+  13. Admin panel
+  14. Dark mode
+  15. Advanced animations
+  16. Unit tests
+  17. E2E tests
+
+
+💡 RECOMMENDED TECH STACK
+================================================================================
+
+Framework & Build:
+  - React 18
+  - Vite 5
+  - ESBuild
+
+Web3:
+  - ethers.js v6
+  - wagmi (optional, higher-level)
+
+Styling:
+  - Tailwind CSS v3
+  - shadcn/ui (optional, pre-built components)
+
+State Management:
+  - zustand (simple)
+  - TanStack Query (API caching)
+
+Forms:
+  - react-hook-form
+  - zod (validation)
+
+HTTP Client:
+  - axios
+  - fetch API (built-in)
+
+Notifications:
+  - react-toastify
+  - sonner (newer alternative)
+
+Routing:
+  - react-router-dom v6
+
+Testing:
+  - Vitest (unit)
+  - React Testing Library (integration)
+  - Cypress (E2E)
+
+Deployment:
+  - Vercel
+  - Netlify
+  - GitHub Pages
+
+
+🔗 KEY RESOURCES
+================================================================================
+
+Ethers.js v6 Docs:
+  https://docs.ethers.org/v6/
+
+React Hooks Documentation:
+  https://react.dev/reference/react
+
+Tailwind CSS:
+  https://tailwindcss.com/docs
+
+React Router:
+  https://reactrouter.com/docs
+
+Vite Documentation:
+  https://vitejs.dev/guide/
+
+
+📝 NOTES FOR FRONTEND DEVELOPER
+================================================================================
+
+1. Contract ABI location:
+   blockchain/artifacts/contracts/OrderTracking.sol/OrderTracking.json
+
+2. Contract Address (Sepolia):
+   0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+
+3. Contract Functions Available:
+   - createOrder(orderId, metadataHash)
+   - getOrder(orderId)
+   - updateOrderStatus(orderId, newStatus, detailsHash)
+   - getOrderHistory(orderId)
+   - cancelOrder(orderId)
+   - setAdminAuthorization(admin, status)
+
+4. Events to Listen:
+   - OrderCreated
+   - OrderStatusUpdated
+   - OrderCancelled
+   - AdminAuthorizationChanged
+
+5. MetaMask Requirements:
+   - Users need MetaMask extension installed
+   - Must be on Sepolia network
+   - Need testnet ETH for gas (free from faucet)
+
+6. Backend API (to be created):
+   - Base URL: http://localhost:3000/api
+   - Endpoints for order CRUD
+   - WebSocket for real-time updates (optional)
+
+7. Error Handling:
+   - MetaMask not installed
+   - Wrong network selected
+   - Insufficient gas
+   - Transaction failed
+   - Contract validation errors
+
+8. Performance Considerations:
+   - Cache contract calls where possible
+   - Use React.memo for expensive components
+   - Pagination for large lists
+   - Lazy loading for routes
+
+
+================================================================================
+END OF FRONTEND TASKS
+================================================================================
+Last Updated: 2026-01-20
+Status: Ready for Development
