@@ -1,0 +1,996 @@
+================================================================================
+DANH SÁCH CÔNG VIỆC TỔNG HỢP - SEQUENTIAL (TUẦN TỰ)
+Blockchain Order Tracking - Truy Vết Đơn Hàng
+Phát triển Tuần Tự (Backend → Frontend → Integration)
+================================================================================
+
+📊 TIMELINE TỔNG QUÁT
+================================================================================
+
+PHASE 1: Blockchain Layer ✅ (HOÀN THÀNH)
+  - Smart Contract: Deployed lên Sepolia
+  - Tests: 18/18 passing
+  - Status: Ready for backend integration
+
+PHASE 2: Backend Development (Tuần 1-2)
+  - Setup environment
+  - Database models
+  - Contract integration
+
+PHASE 3: Backend API & Events (Tuần 3-4)
+  - REST API endpoints
+  - Event listener
+  - Database sync
+
+PHASE 4: Frontend Setup (Tuần 5)
+  - React project
+  - Hooks & utilities
+  - Basic components
+
+PHASE 5: Frontend Components (Tuần 6-7)
+  - Advanced components
+  - Styling & UX
+  - Integration with backend
+
+PHASE 6: Integration & Testing (Tuần 8)
+  - E2E testing
+  - Bug fixes
+  - Performance optimization
+
+PHASE 7: Deployment (Tuần 9)
+  - Production setup
+  - Go-live
+
+Total Timeline: 9 tuần
+
+
+================================================================================
+PHASE 1: BLOCKCHAIN LAYER ✅ HOÀN THÀNH
+================================================================================
+
+✅ 1.1 - Smart Contract Development
+    ✅ Implement OrderTracking.sol
+    ✅ Create 6 functions (create, get, update, cancel, etc.)
+    ✅ Define 4 events (OrderCreated, OrderStatusUpdated, etc.)
+    ✅ Deploy to localhost
+    ✅ Deploy to Sepolia testnet
+
+✅ 1.2 - Smart Contract Testing
+    ✅ Create 18 unit tests
+    ✅ 100% function coverage
+    ✅ All tests passing
+    ✅ Verified on Sepolia
+
+✅ 1.3 - Contract Details
+    ✅ Address: 0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+    ✅ Network: Sepolia (11155111)
+    ✅ Functions working: createOrder, getOrder, updateOrderStatus
+    ✅ Events emitting correctly
+    ✅ ABI exported: blockchain/artifacts/
+
+Status: ✅ READY FOR BACKEND INTEGRATION
+
+
+================================================================================
+PHASE 2: BACKEND DEVELOPMENT - TUẦN 1-2
+================================================================================
+
+📋 TUẦN 1: SETUP & DATABASE
+
+[ ] 2.1 - Khởi tạo Backend Project (Ngày 1)
+    [ ] Tạo thư mục: mkdir backend
+    [ ] Khởi tạo npm: npm init -y
+    [ ] Cài core packages:
+        npm install express mongoose dotenv cors axios ethers
+        npm install -D nodemon
+    [ ] Tạo package.json scripts:
+        "start": "node src/server.js"
+        "dev": "nodemon src/server.js"
+
+[ ] 2.2 - Cấu trúc Folder (Ngày 1)
+    [ ] Tạo src/
+    [ ] Tạo src/config/
+    [ ] Tạo src/models/
+    [ ] Tạo src/controllers/
+    [ ] Tạo src/routes/
+    [ ] Tạo src/services/
+    [ ] Tạo src/middleware/
+    [ ] Tạo src/utils/
+
+[ ] 2.3 - Setup Environment (Ngày 1)
+    [ ] Tạo .env.local:
+        PORT=5000
+        MONGODB_URI=mongodb://localhost:27017/order-tracking
+        CONTRACT_ADDRESS=0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+        SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+        NODE_ENV=development
+        LOG_LEVEL=debug
+    [ ] Tạo .env.example (template)
+    [ ] Install dotenv config
+
+[ ] 2.4 - MongoDB Connection (Ngày 2)
+    [ ] Cài MongoDB local hoặc cloud
+    [ ] Tạo src/config/database.js
+    [ ] Implement connectDB() function
+    [ ] Test kết nối database
+    [ ] Verify connection logs
+
+[ ] 2.5 - Define Data Models (Ngày 2-3)
+    
+    [ ] 2.5.1 - Order Model
+        File: src/models/Order.js
+        Fields:
+          - orderId (string, unique, required)
+          - metadataHash (string, required)
+          - status (enum: CREATED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)
+          - adminAddress (string, required)
+          - txHash (string)
+          - createdAt (timestamp, auto)
+          - updatedAt (timestamp, auto)
+        Indexes: orderId (unique), status
+    
+    [ ] 2.5.2 - StatusLog Model
+        File: src/models/StatusLog.js
+        Fields:
+          - orderId (ref to Order, required)
+          - status (string, required)
+          - timestamp (date, auto)
+          - detailsHash (string)
+          - updatedBy (address)
+        Indexes: orderId, timestamp
+    
+    [ ] 2.5.3 - BlockchainEvent Model
+        File: src/models/BlockchainEvent.js
+        Fields:
+          - eventName (string: OrderCreated, OrderStatusUpdated, etc.)
+          - orderId (string, required)
+          - blockNumber (number, required)
+          - txHash (string, unique)
+          - indexed (boolean)
+          - timestamp (date, auto)
+          - data (JSON)
+        Indexes: txHash, blockNumber
+    
+    [ ] 2.5.4 - User Model
+        File: src/models/User.js
+        Fields:
+          - address (string, unique, required)
+          - role (enum: admin, user, viewer)
+          - isActive (boolean, default: true)
+          - createdAt (timestamp, auto)
+          - lastLogin (date)
+        Indexes: address (unique)
+
+[ ] 2.6 - Create Model Tests (Ngày 3)
+    [ ] Test Order.create()
+    [ ] Test StatusLog.create()
+    [ ] Test BlockchainEvent.create()
+    [ ] Test User.create()
+    [ ] Verify all indexes work
+
+
+📋 TUẦN 2: BLOCKCHAIN INTEGRATION
+
+[ ] 2.7 - Smart Contract Configuration (Ngày 4)
+    [ ] Tạo src/config/blockchain.js
+    [ ] Import Contract ABI từ artifacts
+    [ ] Setup ethers.js provider (Infura)
+    [ ] Setup signer với private key
+    [ ] Initialize contract instance
+    [ ] Export: provider, signer, contract
+
+[ ] 2.8 - Contract Service - Hàm Cơ Bản (Ngày 4-5)
+    File: src/services/contractService.js
+    
+    [ ] Implement createOrder(orderId, metadataHash)
+        - Call contract.createOrder()
+        - Wait for confirmation
+        - Return txHash
+    
+    [ ] Implement getOrder(orderId)
+        - Call contract.getOrder()
+        - Parse return data
+        - Return order object
+    
+    [ ] Implement updateOrderStatus(orderId, status, detailsHash)
+        - Call contract.updateOrderStatus()
+        - Wait confirmation
+        - Return txHash
+    
+    [ ] Implement getOrderHistory(orderId)
+        - Call contract.getOrderHistory()
+        - Parse array
+        - Return history array
+    
+    [ ] Implement cancelOrder(orderId)
+        - Call contract.cancelOrder()
+        - Wait confirmation
+        - Return txHash
+    
+    [ ] Error handling + retry logic
+
+[ ] 2.9 - Blockchain Service Utilities (Ngày 5)
+    File: src/services/blockchainService.js
+    
+    [ ] validateTxHash(txHash) - Kiểm tra format
+    [ ] waitForConfirmation(txHash, confirmations) - Chờ confirm
+    [ ] getGasPrice() - Lấy gas price
+    [ ] estimateGas(functionCall) - Estimate gas
+    [ ] getBlockchainStatus() - Check status
+
+[ ] 2.10 - Middleware & Utilities (Ngày 5)
+    [ ] src/middleware/errorHandler.js
+    [ ] src/middleware/validation.js
+    [ ] src/utils/validators.js
+    [ ] src/utils/helpers.js
+    [ ] src/utils/logger.js
+
+[ ] 2.11 - Basic Express App (Ngày 5)
+    [ ] Tạo src/app.js
+    [ ] Setup Express
+    [ ] Setup CORS
+    [ ] Setup body parser
+    [ ] Setup error handler
+    [ ] Create src/server.js entry point
+
+[ ] 2.12 - Test Backend Setup (Ngày 5)
+    [ ] Run: npm run dev
+    [ ] Test server starts on port 5000
+    [ ] Test database connects
+    [ ] Test blockchain connects
+    [ ] Check logs for errors
+
+
+================================================================================
+PHASE 3: BACKEND API & EVENTS - TUẦN 3-4
+================================================================================
+
+📋 TUẦN 3: REST API ENDPOINTS
+
+[ ] 3.1 - Order Routes Setup (Ngày 6)
+    File: src/routes/orders.js
+    
+    [ ] POST /api/orders - Tạo order
+        Implement:
+          - Validate input (orderId, metadataHash)
+          - Call contractService.createOrder()
+          - Save to MongoDB
+          - Return { success, txHash, order }
+    
+    [ ] GET /api/orders - Lấy danh sách
+        Implement:
+          - Query params: status, limit, skip
+          - Fetch từ MongoDB
+          - Return { orders, total }
+    
+    [ ] GET /api/orders/:orderId - Chi tiết
+        Implement:
+          - Get order từ DB
+          - Get history từ DB
+          - Return full order details
+
+[ ] 3.2 - Order Update Routes (Ngày 7)
+    [ ] PUT /api/orders/:orderId - Update order
+        Implement:
+          - Validate input
+          - Call contractService.updateOrderStatus()
+          - Update MongoDB
+          - Return { success, txHash }
+    
+    [ ] DELETE /api/orders/:orderId - Cancel order
+        Implement:
+          - Call contractService.cancelOrder()
+          - Update status to CANCELLED
+          - Return { success, txHash }
+
+[ ] 3.3 - History & Events Routes (Ngày 7)
+    File: src/routes/status.js
+    
+    [ ] GET /api/orders/:orderId/history
+        Implement:
+          - Get StatusLog từ DB
+          - Sort by timestamp
+          - Return { statusUpdates }
+    
+    [ ] GET /api/orders/:orderId/events
+        Implement:
+          - Get BlockchainEvent từ DB
+          - Return { blockchainEvents }
+
+[ ] 3.4 - Statistics Routes (Ngày 8)
+    File: src/routes/stats.js
+    
+    [ ] GET /api/stats
+        Implement:
+          - Count total orders
+          - Count by status
+          - Get last updated
+          - Return statistics
+    
+    [ ] GET /api/stats/by-status
+        Implement:
+          - Group orders by status
+          - Return count mapping
+
+[ ] 3.5 - Health Check Route (Ngày 8)
+    [ ] GET /api/health
+        Implement:
+          - Check database connection
+          - Check blockchain connection
+          - Return status
+
+[ ] 3.6 - Register Routes (Ngày 8)
+    [ ] Import routes vào app.js
+    [ ] Mount routes:
+        /api/orders
+        /api/stats
+        /api/health
+
+[ ] 3.7 - Test All Endpoints (Ngày 8)
+    [ ] Create Postman collection
+    [ ] Test POST /orders (create)
+    [ ] Test GET /orders (list)
+    [ ] Test GET /orders/:id (detail)
+    [ ] Test PUT /orders/:id (update)
+    [ ] Test GET /orders/:id/history
+    [ ] Test GET /api/health
+    [ ] Document all responses
+
+
+📋 TUẦN 4: EVENT LISTENER & SYNC
+
+[ ] 3.8 - Event Listener Service (Ngày 9)
+    File: src/services/eventListenerService.js
+    
+    [ ] Implement startListening()
+        - Setup contract event listeners
+        - Listen to OrderCreated
+        - Listen to OrderStatusUpdated
+        - Listen to OrderCancelled
+        - Listen to AdminAuthorizationChanged
+    
+    [ ] Implement event handlers
+        - onOrderCreated(event)
+        - onOrderStatusUpdated(event)
+        - onOrderCancelled(event)
+    
+    [ ] Implement syncEventToDatabase(event)
+        - Save event to BlockchainEvent
+        - Update Order status
+        - Save to StatusLog
+
+[ ] 3.9 - Error Handling & Recovery (Ngày 10)
+    [ ] Implement retry logic
+    [ ] Implement error logging
+    [ ] Implement event recovery
+    [ ] Test error scenarios
+
+[ ] 3.10 - Start Event Listener on Server (Ngày 10)
+    [ ] Call startListening() in server.js startup
+    [ ] Add graceful shutdown
+    [ ] Add listener health checks
+
+[ ] 3.11 - Controllers Implementation (Ngày 10-11)
+    File: src/controllers/orderController.js
+    
+    [ ] orderController.getAllOrders()
+    [ ] orderController.getOrderById()
+    [ ] orderController.createOrder()
+    [ ] orderController.updateOrderStatus()
+    [ ] orderController.cancelOrder()
+
+[ ] 3.12 - API Documentation (Ngày 11)
+    [ ] Create Swagger/OpenAPI spec
+    [ ] Document all endpoints
+    [ ] Document request/response schemas
+    [ ] Document error codes
+    [ ] Upload to Postman
+
+[ ] 3.13 - End-to-End Backend Testing (Ngày 11-12)
+    [ ] Test: Create order (DB + Blockchain)
+    [ ] Test: Get order from DB
+    [ ] Test: Update status (DB + Blockchain)
+    [ ] Test: Event listener sync
+    [ ] Test: Error handling
+    [ ] All tests pass ✅
+
+Status: ✅ BACKEND COMPLETE & TESTED
+
+
+================================================================================
+PHASE 4: FRONTEND SETUP - TUẦN 5
+================================================================================
+
+[ ] 4.1 - Create React Project (Ngày 13)
+    [ ] Run: npm create vite@latest frontend -- --template react
+    [ ] Install dependencies:
+        npm install ethers react-router-dom axios zustand
+        npm install -D tailwindcss postcss autoprefixer
+    [ ] Verify installation
+
+[ ] 4.2 - Project Structure (Ngày 13)
+    [ ] Create folders:
+        src/components/
+        src/hooks/
+        src/services/
+        src/contracts/
+        src/utils/
+        src/pages/
+        src/styles/
+
+[ ] 4.3 - Copy Contract ABI (Ngày 13)
+    [ ] Copy từ: blockchain/artifacts/contracts/OrderTracking.sol/OrderTracking.json
+    [ ] Đến: frontend/src/contracts/OrderTracking.json
+    [ ] Verify ABI loaded
+
+[ ] 4.4 - Setup Environment (Ngày 14)
+    [ ] Tạo .env.local:
+        VITE_CONTRACT_ADDRESS=0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+        VITE_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+        VITE_CHAIN_ID=11155111
+        VITE_API_BASE_URL=http://localhost:5000/api
+
+[ ] 4.5 - Setup Tailwind CSS (Ngày 14)
+    [ ] npx tailwindcss init -p
+    [ ] Configure tailwind.config.js
+    [ ] Add CSS imports
+    [ ] Test tailwind working
+
+[ ] 4.6 - Create Core Utilities (Ngày 14-15)
+    
+    [ ] 4.6.1 - src/utils/constants.js
+        - CONTRACT_ADDRESS
+        - CHAIN_IDS
+        - ORDER_STATUSES
+        - ETHERSCAN_URLS
+    
+    [ ] 4.6.2 - src/utils/web3Utils.js
+        - truncateAddress()
+        - isValidAddress()
+        - formatBalance()
+        - getEtherscanUrl()
+        - getNetworkName()
+    
+    [ ] 4.6.3 - src/utils/helpers.js
+        - formatOrderResponse()
+        - formatDate()
+
+[ ] 4.7 - Create Hooks (Ngày 15)
+    
+    [ ] 4.7.1 - src/hooks/useContract.js
+        Implement:
+          - connectWallet()
+          - disconnectWallet()
+          - getProvider()
+          - getSigner()
+          - getContract()
+          - getChainId()
+        Returns: { provider, signer, contract, account, connected, ... }
+    
+    [ ] 4.7.2 - src/hooks/useAccount.js
+        Implement:
+          - getCurrentAddress()
+          - getBalance()
+          - watchAccountChange()
+          - watchNetworkChange()
+    
+    [ ] 4.7.3 - src/hooks/useOrder.js
+        Implement:
+          - createOrder(orderId, metadataHash)
+          - getOrder(orderId)
+          - updateOrderStatus(...)
+          - getOrderHistory(orderId)
+
+[ ] 4.8 - Create Services (Ngày 15)
+    
+    [ ] 4.8.1 - src/services/contractService.js
+        Implement contract call wrappers
+    
+    [ ] 4.8.2 - src/services/apiService.js (Mock)
+        Create mock responses while backend ready
+        Later: Replace with real API calls
+
+[ ] 4.9 - Test Frontend Setup (Ngày 15)
+    [ ] Run: npm run dev
+    [ ] Frontend starts on http://localhost:5173
+    [ ] No console errors
+    [ ] Tailwind CSS working
+    [ ] Environment variables loaded
+
+
+================================================================================
+PHASE 5: FRONTEND COMPONENTS - TUẦN 6-7
+================================================================================
+
+📋 TUẦN 6: CORE COMPONENTS
+
+[ ] 5.1 - ConnectWallet Component (Ngày 16)
+    File: src/components/ConnectWallet/ConnectWallet.jsx
+    
+    [ ] Create component structure
+    [ ] Import useContract hook
+    [ ] Implement connect button logic
+    [ ] Show address when connected
+    [ ] Show balance
+    [ ] Show network
+    [ ] Handle errors
+    [ ] Style with Tailwind
+
+[ ] 5.2 - CreateOrder Component (Ngày 17)
+    File: src/components/CreateOrder/CreateOrder.jsx
+    
+    [ ] Create form structure
+    [ ] Input: Order ID
+    [ ] Input: Metadata Hash
+    [ ] Submit button
+    [ ] Loading state
+    [ ] Error messages
+    [ ] Success notification
+    [ ] Style component
+
+[ ] 5.3 - OrderDetail Component (Ngày 17)
+    File: src/components/OrderDetail/OrderDetail.jsx
+    
+    [ ] Display order info
+    [ ] Show status
+    [ ] Show created time
+    [ ] Show metadata hash
+    [ ] Implement search
+    [ ] Loading state
+    [ ] Error handling
+    [ ] Style component
+
+[ ] 5.4 - OrderHistory Component (Ngày 18)
+    File: src/components/OrderHistory/OrderHistory.jsx
+    
+    [ ] Timeline view
+    [ ] Status badges
+    [ ] Timestamps
+    [ ] Updated by address
+    [ ] Expand/collapse details
+    [ ] Loading state
+    [ ] Style component
+
+[ ] 5.5 - TransactionStatus Component (Ngày 18)
+    File: src/components/TransactionStatus/TransactionStatus.jsx
+    
+    [ ] Display tx hash
+    [ ] Clickable to Etherscan
+    [ ] Status badge (pending/confirmed/failed)
+    [ ] Copy button
+    [ ] Gas used display
+    [ ] Style component
+
+[ ] 5.6 - OrderList Component (Ngày 19)
+    File: src/components/OrderList/OrderList.jsx
+    
+    [ ] Display as table
+    [ ] Columns: ID, Status, Created, Actions
+    [ ] Search functionality
+    [ ] Filter by status
+    [ ] Pagination
+    [ ] Link to detail
+    [ ] Loading state
+    [ ] Empty state
+    [ ] Style component
+
+[ ] 5.7 - Test All Components (Ngày 19-20)
+    [ ] ConnectWallet: renders, clickable
+    [ ] CreateOrder: form works, can submit
+    [ ] OrderDetail: displays data
+    [ ] OrderHistory: shows timeline
+    [ ] TransactionStatus: shows tx info
+    [ ] OrderList: displays orders
+
+
+📋 TUẦN 7: PAGES & INTEGRATION
+
+[ ] 5.8 - Create Pages (Ngày 21)
+    
+    [ ] 5.8.1 - src/pages/Dashboard.jsx
+        - ConnectWallet section
+        - Stats display
+        - Recent orders table
+        - Quick action buttons
+    
+    [ ] 5.8.2 - src/pages/CreateOrderPage.jsx
+        - Full form layout
+        - CreateOrder component
+        - Preview metadata
+        - Estimated gas
+        - Success confirmation
+    
+    [ ] 5.8.3 - src/pages/TrackingPage.jsx
+        - Search bar
+        - OrderDetail component
+        - OrderHistory component
+        - Share order link
+
+[ ] 5.9 - Setup Routing (Ngày 21)
+    File: src/App.jsx
+    
+    [ ] Setup React Router
+    [ ] Create routes:
+        / → Dashboard
+        /create → CreateOrderPage
+        /tracking → TrackingPage
+        /orders/:id → OrderDetail page
+        /admin → AdminPanel
+    [ ] Create Navigation bar
+    [ ] Create Footer
+    [ ] Test all routes work
+
+[ ] 5.10 - API Service Integration (Ngày 22)
+    File: src/services/apiService.js
+    
+    [ ] Replace mock API
+    [ ] Implement real API calls to backend
+    [ ] POST /api/orders
+    [ ] GET /api/orders
+    [ ] GET /api/orders/:id
+    [ ] PUT /api/orders/:id
+    [ ] GET /api/orders/:id/history
+    [ ] Error handling
+    [ ] Logging
+
+[ ] 5.11 - Notifications System (Ngày 22)
+    [ ] Install react-toastify or sonner
+    [ ] Implement showSuccess()
+    [ ] Implement showError()
+    [ ] Implement showWarning()
+    [ ] Add to components
+    [ ] Test notifications display
+
+[ ] 5.12 - Responsive Design (Ngày 23)
+    [ ] Test mobile (320px)
+    [ ] Test tablet (768px)
+    [ ] Test desktop (1024px)
+    [ ] Test large (1280px)
+    [ ] Fix all responsive issues
+    [ ] Use Tailwind breakpoints
+
+[ ] 5.13 - Dark Mode (Ngày 24) [Optional]
+    [ ] Setup Tailwind dark mode
+    [ ] Add toggle button
+    [ ] Test dark/light switching
+    [ ] Persist preference
+
+
+================================================================================
+PHASE 6: INTEGRATION & TESTING - TUẦN 8
+================================================================================
+
+[ ] 6.1 - Frontend-Backend Integration (Ngày 25)
+    [ ] Start backend: npm run dev (port 5000)
+    [ ] Start frontend: npm run dev (port 5173)
+    [ ] Test API calls work from frontend
+    [ ] Verify CORS working
+    [ ] Check console for errors
+
+[ ] 6.2 - End-to-End Testing (Ngày 25-26)
+    Scenario 1: Create Order
+      [ ] Connect MetaMask
+      [ ] Fill order form
+      [ ] Submit
+      [ ] See tx hash
+      [ ] Wait for confirmation
+      [ ] See order in dashboard
+      [ ] Verify in blockchain ✅
+    
+    Scenario 2: View Order Details
+      [ ] Search order ID
+      [ ] See all details
+      [ ] See status history
+      [ ] See events
+    
+    Scenario 3: Update Order Status
+      [ ] Update status
+      [ ] See transaction
+      [ ] See history updated
+      [ ] Verify on blockchain
+
+[ ] 6.3 - Error Handling Testing (Ngày 26-27)
+    [ ] MetaMask not installed
+    [ ] Wrong network
+    [ ] Insufficient gas
+    [ ] Invalid order ID
+    [ ] Network errors
+    [ ] Database errors
+    [ ] Contract errors
+    All should show proper error messages ✅
+
+[ ] 6.4 - Performance Testing (Ngày 27)
+    [ ] Page load time < 2s
+    [ ] API response < 500ms
+    [ ] No memory leaks
+    [ ] Browser console: no errors/warnings
+    [ ] Network tab: no hanging requests
+
+[ ] 6.5 - Bug Fixes (Ngày 27-28)
+    [ ] Fix any UI bugs
+    [ ] Fix any logic bugs
+    [ ] Fix any styling issues
+    [ ] Fix any performance issues
+    [ ] Test all scenarios again
+
+[ ] 6.6 - Unit Tests (Ngày 28) [Optional]
+    [ ] Test useContract hook
+    [ ] Test useAccount hook
+    [ ] Test useOrder hook
+    [ ] Test web3Utils functions
+    [ ] Test helpers functions
+
+[ ] 6.7 - Integration Tests (Ngày 28-29)
+    [ ] Test ConnectWallet flow
+    [ ] Test CreateOrder flow
+    [ ] Test OrderDetail flow
+    [ ] All flows working ✅
+
+
+================================================================================
+PHASE 7: DEPLOYMENT - TUẦN 9
+================================================================================
+
+[ ] 7.1 - Environment Setup (Ngày 30)
+    [ ] Create .env.production files
+    [ ] Configure production API URL
+    [ ] Configure production RPC
+    [ ] Configure production contract address
+    [ ] Disable debug logging
+
+[ ] 7.2 - Backend Deployment (Ngày 30-31)
+    [ ] Build backend
+    [ ] Choose hosting (Heroku, AWS, etc.)
+    [ ] Setup database in production
+    [ ] Deploy backend
+    [ ] Test production backend
+    [ ] Verify all endpoints work
+
+[ ] 7.3 - Frontend Deployment (Ngày 31)
+    [ ] Build frontend: npm run build
+    [ ] Choose hosting (Vercel, Netlify, etc.)
+    [ ] Connect GitHub repo
+    [ ] Setup environment variables
+    [ ] Deploy frontend
+    [ ] Test production frontend
+    [ ] Verify all features work
+
+[ ] 7.4 - Post-Deployment Verification (Ngày 31)
+    [ ] Test complete flow in production
+    [ ] Create order → blockchain
+    [ ] Order synced to database
+    [ ] Frontend shows order
+    [ ] All links working
+    [ ] No console errors
+    [ ] Performance acceptable
+
+[ ] 7.5 - Monitoring & Support (Ngày 31+)
+    [ ] Setup error tracking (Sentry)
+    [ ] Setup analytics
+    [ ] Create monitoring dashboard
+    [ ] Document support process
+    [ ] Ready for users
+
+
+================================================================================
+CHECKLISTS CUỐI CÙNG
+================================================================================
+
+📋 BACKEND CHECKLIST
+================================================================================
+
+Database:
+  ✅ MongoDB connected
+  ✅ All models defined
+  ✅ Indexes created
+  ✅ Sample data inserted
+
+Smart Contract Integration:
+  ✅ Ethers.js configured
+  ✅ Contract loaded
+  ✅ Contract functions working
+  ✅ Events detected
+
+API Endpoints:
+  ✅ POST /api/orders working
+  ✅ GET /api/orders working
+  ✅ GET /api/orders/:id working
+  ✅ PUT /api/orders/:id working
+  ✅ DELETE /api/orders/:id working
+  ✅ GET /api/orders/:id/history working
+  ✅ GET /api/stats working
+  ✅ GET /api/health working
+
+Event Listener:
+  ✅ Event listener starts
+  ✅ Catches OrderCreated
+  ✅ Catches OrderStatusUpdated
+  ✅ Syncs to database
+  ✅ No errors or delays
+
+Error Handling:
+  ✅ All endpoints validate input
+  ✅ Proper error codes (400, 404, 500)
+  ✅ Helpful error messages
+  ✅ No crash on errors
+
+Documentation:
+  ✅ API documented (Swagger)
+  ✅ Postman collection created
+  ✅ README updated
+  ✅ Deployment guide created
+
+
+📋 FRONTEND CHECKLIST
+================================================================================
+
+Setup:
+  ✅ React project created
+  ✅ All packages installed
+  ✅ Tailwind configured
+  ✅ Environment variables set
+
+Hooks & Utils:
+  ✅ useContract hook works
+  ✅ useAccount hook works
+  ✅ useOrder hook works
+  ✅ Web3 utils working
+  ✅ Constants defined
+
+Components:
+  ✅ ConnectWallet renders
+  ✅ CreateOrder form works
+  ✅ OrderDetail displays
+  ✅ OrderHistory shows timeline
+  ✅ TransactionStatus shows tx
+  ✅ OrderList displays orders
+
+Pages:
+  ✅ Dashboard page works
+  ✅ CreateOrderPage works
+  ✅ TrackingPage works
+  ✅ Router configured
+  ✅ Navigation working
+
+Integration:
+  ✅ Connects to backend API
+  ✅ CORS working
+  ✅ API calls successful
+  ✅ Data displayed correctly
+  ✅ Notifications showing
+
+Styling:
+  ✅ Responsive design (all breakpoints)
+  ✅ No layout shifts
+  ✅ Loading states visible
+  ✅ Empty states handled
+  ✅ Error messages clear
+
+Performance:
+  ✅ Page load < 2 seconds
+  ✅ No console errors
+  ✅ No memory leaks
+  ✅ Smooth animations
+  ✅ Fast interactions
+
+
+📋 INTEGRATION CHECKLIST
+================================================================================
+
+End-to-End:
+  ✅ Connect wallet
+  ✅ Create order
+  ✅ Transaction signed
+  ✅ Order on blockchain
+  ✅ Order synced to DB
+  ✅ Order visible in UI
+  ✅ Status updates visible
+  ✅ Event history complete
+
+Testing:
+  ✅ All unit tests pass
+  ✅ All integration tests pass
+  ✅ All E2E tests pass
+  ✅ Error scenarios handled
+  ✅ Performance acceptable
+  ✅ No bugs found
+
+Documentation:
+  ✅ README complete
+  ✅ Setup guide written
+  ✅ API docs complete
+  ✅ Deployment guide done
+  ✅ User guide created
+
+
+================================================================================
+SUMMARY: SEQUENTIAL DEVELOPMENT COMPLETION
+================================================================================
+
+WEEK 1-2: Backend API & Database ✅
+  Commits: Backend setup, models, API endpoints
+
+WEEK 3-4: Blockchain Integration ✅
+  Commits: Event listener, contract integration
+
+WEEK 5: Frontend Setup ✅
+  Commits: React project, hooks, utilities
+
+WEEK 6-7: Frontend Components ✅
+  Commits: Components, pages, styling
+
+WEEK 8: Integration & Testing ✅
+  Commits: Full integration, bug fixes
+
+WEEK 9: Deployment ✅
+  Commits: Production deployment, docs
+
+Total: 9 weeks of sequential development
+
+
+================================================================================
+GIT COMMIT SCHEDULE
+================================================================================
+
+After Backend Phase 2 (Week 2):
+  git commit -m "Backend Phase 2: Database models & API setup"
+
+After Backend Phase 3 (Week 4):
+  git commit -m "Backend Phase 3: REST API & Event listener complete"
+
+After Frontend Phase 4 (Week 5):
+  git commit -m "Frontend Phase 4: React setup & hooks"
+
+After Frontend Phase 5 (Week 7):
+  git commit -m "Frontend Phase 5: All components & pages"
+
+After Integration Phase 6 (Week 8):
+  git commit -m "Integration: Frontend-Backend integration complete"
+
+After Deployment Phase 7 (Week 9):
+  git commit -m "Production: Deploy backend & frontend"
+
+
+================================================================================
+NOTES CHỮ QUAN TRỌNG
+================================================================================
+
+1. BACKEND FIRST:
+   - Backend hoàn thành trước khi bắt đầu frontend
+   - Frontend dùng mock API cho đến khi backend ready
+   - Sau đó kết nối thực
+
+2. TEST FREQUENTLY:
+   - Test mỗi component/feature khi xong
+   - Không để issues tích lũy
+   - Fix bugs ngay lập tức
+
+3. COMMIT REGULARLY:
+   - Commit sau mỗi phase hoàn thành
+   - Message chi tiết, có emoji
+   - Push to GitHub thường xuyên
+
+4. DOCUMENTATION:
+   - Document task khi hoàn thành
+   - Create guides
+   - Maintain README
+
+5. BACKUP & SAFETY:
+   - Git branches cho major features
+   - Pull requests trước merge
+   - Code review nếu có team
+
+6. PERFORMANCE:
+   - Monitor database queries
+   - Check API response times
+   - Optimize early
+   - Don't premature optimize
+
+
+================================================================================
+KẾT THÚC - DANH SÁCH CÔNG VIỆC TỔNG HỢP TUẦN TỰ
+================================================================================
+Cập nhật: 2026-01-20
+Phương pháp: Sequential (Tuần tự)
+Timeline: 9 tuần
+Status: Sẵn sàng cho phát triển
