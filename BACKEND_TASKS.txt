@@ -1,0 +1,609 @@
+================================================================================
+BACKEND DEVELOPER - NODE.JS + EXPRESS TASK LIST
+Project: Blockchain Order Tracking - Truy Vết Đơn Hàng
+Date: 2026-01-20
+================================================================================
+
+📋 PHASE 1: SETUP & ENVIRONMENT
+================================================================================
+
+[ ] 1.1 - Initialize Node.js project
+    Command: mkdir backend && cd backend && npm init -y
+    
+[ ] 1.2 - Install core packages
+    npm install express mongoose dotenv cors axios ethers
+    npm install -D nodemon concurrently
+
+[ ] 1.3 - Create folder structure
+    backend/
+      ├── src/
+      │   ├── config/
+      │   │   ├── database.js
+      │   │   ├── blockchain.js
+      │   │   └── env.js
+      │   ├── models/
+      │   │   ├── Order.js
+      │   │   ├── StatusLog.js
+      │   │   ├── BlockchainEvent.js
+      │   │   └── User.js
+      │   ├── controllers/
+      │   │   ├── orderController.js
+      │   │   ├── statusController.js
+      │   │   └── eventController.js
+      │   ├── routes/
+      │   │   ├── orders.js
+      │   │   ├── status.js
+      │   │   └── events.js
+      │   ├── services/
+      │   │   ├── contractService.js
+      │   │   ├── orderService.js
+      │   │   ├── eventListenerService.js
+      │   │   └── blockchainService.js
+      │   ├── middleware/
+      │   │   ├── auth.js
+      │   │   ├── errorHandler.js
+      │   │   └── validation.js
+      │   ├── utils/
+      │   │   ├── logger.js
+      │   │   ├── validators.js
+      │   │   └── helpers.js
+      │   └── app.js
+      ├── routes/
+      ├── .env.example
+      ├── .env.local
+      ├── server.js
+      └── package.json
+
+[ ] 1.4 - Setup environment variables
+    Create: backend/.env.local
+    Content:
+      PORT=5000
+      MONGODB_URI=mongodb://localhost:27017/order-tracking
+      CONTRACT_ADDRESS=0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+      SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+      ADMIN_PRIVATE_KEY=your_private_key
+      NODE_ENV=development
+      LOG_LEVEL=debug
+
+[ ] 1.5 - Create .env.example (for repo)
+    Show template without sensitive data
+
+
+📋 PHASE 2: DATABASE & MODELS
+================================================================================
+
+[ ] 2.1 - MongoDB Connection
+    File: src/config/database.js
+    Functions:
+      - connectDB(): Promise<void>
+      - disconnectDB(): Promise<void>
+      - getConnection(): Mongoose.Connection
+
+[ ] 2.2 - Order Model
+    File: src/models/Order.js
+    Schema fields:
+      - orderId (string, unique, required)
+      - metadataHash (string, required)
+      - status (enum: CREATED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)
+      - adminAddress (string, required)
+      - createdAt (timestamp, auto)
+      - updatedAt (timestamp, auto)
+      - lastBlockSync (number)
+      - txHash (string)
+
+[ ] 2.3 - StatusLog Model
+    File: src/models/StatusLog.js
+    Schema fields:
+      - orderId (ref to Order)
+      - status (string)
+      - timestamp (date)
+      - detailsHash (string)
+      - updatedBy (address)
+
+[ ] 2.4 - BlockchainEvent Model
+    File: src/models/BlockchainEvent.js
+    Schema fields:
+      - eventName (OrderCreated, OrderStatusUpdated, etc.)
+      - orderId (string)
+      - blockNumber (number)
+      - txHash (string)
+      - indexed (boolean)
+      - timestamp (date)
+      - data (JSON)
+
+[ ] 2.5 - User Model
+    File: src/models/User.js
+    Schema fields:
+      - address (wallet address, unique)
+      - role (admin, user, viewer)
+      - isActive (boolean)
+      - createdAt (timestamp)
+      - lastLogin (timestamp)
+
+[ ] 2.6 - Create indexes
+    - Order: orderId (unique), status
+    - StatusLog: orderId, timestamp
+    - BlockchainEvent: txHash, blockNumber
+    - User: address (unique)
+
+
+📋 PHASE 3: BLOCKCHAIN INTEGRATION
+================================================================================
+
+[ ] 3.1 - Smart Contract Configuration
+    File: src/config/blockchain.js
+    Load:
+      - Contract ABI (from artifacts)
+      - Contract address
+      - Provider (Infura/Alchemy)
+      - Signer setup
+    Exports: provider, signer, contract
+
+[ ] 3.2 - Contract Service
+    File: src/services/contractService.js
+    Functions:
+      - createOrder(orderId, metadataHash)
+      - getOrder(orderId)
+      - updateOrderStatus(orderId, status, detailsHash)
+      - getOrderHistory(orderId)
+      - cancelOrder(orderId)
+      - checkAdminAuth(address)
+    Error handling + retry logic
+
+[ ] 3.3 - Blockchain Service
+    File: src/services/blockchainService.js
+    Functions:
+      - validateTxHash(txHash)
+      - waitForConfirmation(txHash, confirmations)
+      - getGasPrice()
+      - estimateGas(functionCall)
+      - getBlockchainStatus()
+
+[ ] 3.4 - Event Listener Service
+    File: src/services/eventListenerService.js
+    Functions:
+      - startListening(): void
+      - stopListening(): void
+      - onOrderCreated(event): Promise<void>
+      - onOrderStatusUpdated(event): Promise<void>
+      - onOrderCancelled(event): Promise<void>
+      - syncEventToDatabase(event): Promise<void>
+    Implements:
+      - Event polling or WebSocket
+      - Database sync
+      - Error recovery
+
+
+📋 PHASE 4: REST API ROUTES
+================================================================================
+
+[ ] 4.1 - Order Routes
+    File: src/routes/orders.js
+    
+    Endpoints:
+      GET /api/orders
+        Query: ?status=CREATED&limit=10&skip=0
+        Response: { orders: [...], total: number }
+      
+      POST /api/orders
+        Body: { orderId, metadataHash, adminAddress }
+        Response: { success, txHash, order }
+        Calls: contract.createOrder()
+      
+      GET /api/orders/:orderId
+        Response: { order details + history }
+      
+      PUT /api/orders/:orderId
+        Body: { status, detailsHash }
+        Response: { success, txHash }
+        Calls: contract.updateOrderStatus()
+      
+      DELETE /api/orders/:orderId
+        Response: { success, txHash }
+        Calls: contract.cancelOrder()
+
+[ ] 4.2 - Status Routes
+    File: src/routes/status.js
+    
+    Endpoints:
+      GET /api/orders/:orderId/history
+        Response: { statusUpdates: [...] }
+      
+      GET /api/orders/:orderId/events
+        Response: { blockchainEvents: [...] }
+
+[ ] 4.3 - Statistics Routes
+    File: src/routes/stats.js
+    
+    Endpoints:
+      GET /api/stats
+        Response: {
+          totalOrders,
+          pendingOrders,
+          completedOrders,
+          cancelledOrders,
+          lastUpdated
+        }
+      
+      GET /api/stats/by-status
+        Response: { status -> count mapping }
+
+[ ] 4.4 - Health Check
+    GET /api/health
+      Response: {
+        status: "ok",
+        database: "connected",
+        blockchain: "connected",
+        uptime: seconds
+      }
+
+
+📋 PHASE 5: CONTROLLERS & SERVICES
+================================================================================
+
+[ ] 5.1 - Order Controller
+    File: src/controllers/orderController.js
+    Functions:
+      - getAllOrders(req, res)
+      - getOrderById(req, res)
+      - createOrder(req, res)
+      - updateOrderStatus(req, res)
+      - cancelOrder(req, res)
+    Validation + error handling
+
+[ ] 5.2 - Order Service (Business Logic)
+    File: src/services/orderService.js
+    Functions:
+      - createOrderInDB(data)
+      - getOrderFromDB(orderId)
+      - updateOrderInDB(orderId, data)
+      - getOrderWithHistory(orderId)
+      - syncOrderWithBlockchain(orderId)
+    DB operations + contract calls
+
+[ ] 5.3 - Status Controller
+    File: src/controllers/statusController.js
+    Functions:
+      - getOrderHistory(req, res)
+      - getBlockchainEvents(req, res)
+
+[ ] 5.4 - Validation Middleware
+    File: src/middleware/validation.js
+    Functions:
+      - validateOrderCreation(req, res, next)
+      - validateStatusUpdate(req, res, next)
+      - validateOrderId(req, res, next)
+    Using: joi or zod for schema validation
+
+[ ] 5.5 - Error Handler Middleware
+    File: src/middleware/errorHandler.js
+    Handles:
+      - 404 Not Found
+      - 400 Bad Request
+      - 500 Server Error
+      - Contract errors
+      - Database errors
+    Consistent error response format
+
+
+📋 PHASE 6: BLOCKCHAIN EVENT SYNC
+================================================================================
+
+[ ] 6.1 - Event Listener Setup
+    Start listening to contract events:
+      - OrderCreated
+      - OrderStatusUpdated
+      - OrderCancelled
+      - AdminAuthorizationChanged
+
+[ ] 6.2 - Event Handler Functions
+    When OrderCreated event fires:
+      1. Parse event data
+      2. Check if order exists in DB
+      3. If not, insert new order
+      4. Save event to BlockchainEvent collection
+
+    When OrderStatusUpdated event fires:
+      1. Parse event data
+      2. Update Order status in DB
+      3. Add to StatusLog collection
+      4. Save to BlockchainEvent
+
+[ ] 6.3 - Sync Worker
+    File: src/services/eventListenerService.js
+    Runs as background service:
+      - Connect to blockchain
+      - Poll events (interval-based) or WebSocket
+      - Process events
+      - Retry failed syncs
+      - Logging
+
+[ ] 6.4 - Startup Integration
+    In server.js:
+      1. Connect MongoDB
+      2. Connect blockchain
+      3. Start event listener
+      4. Start Express server
+
+
+📋 PHASE 7: MIDDLEWARE & UTILITIES
+================================================================================
+
+[ ] 7.1 - CORS Setup
+    File: src/app.js
+    Allow requests from:
+      - http://localhost:3000 (dev frontend)
+      - https://yourdomain.com (production)
+
+[ ] 7.2 - Request Logging
+    File: src/middleware/logger.js
+    Log:
+      - Request method, path, status
+      - Response time
+      - Errors
+
+[ ] 7.3 - Input Validation Utils
+    File: src/utils/validators.js
+    Functions:
+      - isValidEthereumAddress(address)
+      - isValidOrderId(orderId)
+      - isValidMetadataHash(hash)
+      - isValidStatus(status)
+
+[ ] 7.4 - Helper Utilities
+    File: src/utils/helpers.js
+    Functions:
+      - formatOrderResponse(order)
+      - formatEventResponse(event)
+      - calculateTimestamps()
+      - generateOrderId() [if needed]
+
+[ ] 7.5 - Rate Limiting (Optional)
+    Implement:
+      - 100 requests per 15 minutes per IP
+      - Prevent spam/abuse
+
+
+📋 PHASE 8: TESTING & DEPLOYMENT
+================================================================================
+
+[ ] 8.1 - Unit Tests
+    Framework: Jest
+    Test files:
+      - services/__tests__/contractService.test.js
+      - services/__tests__/orderService.test.js
+      - utils/__tests__/validators.test.js
+
+[ ] 8.2 - Integration Tests
+    Test scenarios:
+      - Create order (API → Contract → DB)
+      - Get order (API → DB)
+      - Update status (API → Contract → DB)
+      - Event listener sync
+
+[ ] 8.3 - API Documentation
+    Tool: Swagger/OpenAPI
+    Endpoints documented:
+      - Request/response schemas
+      - Error codes
+      - Examples
+
+[ ] 8.4 - Environment Setup
+    Create:
+      - .env.development
+      - .env.production
+      - .env.example
+
+[ ] 8.5 - Docker Setup (Optional)
+    Create: Dockerfile
+      - Node.js image
+      - Install dependencies
+      - Expose port 5000
+      - Run server
+
+[ ] 8.6 - Deployment
+    Options:
+      - Heroku
+      - AWS EC2
+      - DigitalOcean
+      - Vercel (serverless)
+    Setup:
+      - Environment variables
+      - Database URL
+      - Blockchain RPC
+      - Logging/monitoring
+
+
+📋 PHASE 9: OPTIONAL ENHANCEMENTS
+================================================================================
+
+[ ] 9.1 - WebSocket Support
+    Real-time updates for frontend:
+      - New order created
+      - Status updated
+      - Events synced
+
+[ ] 9.2 - Caching Layer
+    Redis integration:
+      - Cache frequently accessed orders
+      - Cache statistics
+      - Reduce database queries
+
+[ ] 9.3 - Authentication
+    JWT tokens:
+      - Admin authentication
+      - Protected routes
+      - Role-based access control
+
+[ ] 9.4 - Pagination & Filtering
+    Query parameters:
+      - ?page=1&limit=20
+      - ?status=CREATED&dateFrom=...&dateTo=...
+      - ?search=ORDER-001
+
+[ ] 9.5 - Performance Optimization
+    Techniques:
+      - Database query optimization
+      - Index usage
+      - Connection pooling
+      - Response compression
+
+
+🎯 PRIORITY ORDER (MVP FIRST)
+================================================================================
+
+🔴 CRITICAL (Must have):
+  1. MongoDB connection & Order model
+  2. Smart contract integration (contractService)
+  3. REST API: POST /orders, GET /orders/:id
+  4. Event listener (blockchain sync)
+  5. Error handling middleware
+
+🟡 HIGH (Should have):
+  6. All CRUD endpoints
+  7. Status history tracking
+  8. Event synchronization
+  9. Input validation
+  10. Basic logging
+
+🟢 NICE-TO-HAVE (Could have):
+  11. WebSocket real-time updates
+  12. Redis caching
+  13. JWT authentication
+  14. Advanced filtering
+  15. Docker deployment
+
+
+💡 RECOMMENDED TECH STACK
+================================================================================
+
+Runtime & Framework:
+  - Node.js 18+
+  - Express.js v4
+  - Nodemon (dev)
+
+Database:
+  - MongoDB 6+
+  - Mongoose v7 (ODM)
+
+Blockchain:
+  - ethers.js v6
+  - Infura/Alchemy for RPC
+
+Validation:
+  - joi (schema validation)
+  - express-validator
+
+Utilities:
+  - dotenv (env variables)
+  - cors (cross-origin)
+  - body-parser (request parsing)
+  - axios (HTTP client)
+
+Logging:
+  - winston
+  - morgan (request logger)
+
+Testing:
+  - Jest (unit/integration)
+  - Supertest (API testing)
+
+Documentation:
+  - Swagger/OpenAPI
+  - Postman collection
+
+Deployment:
+  - Docker
+  - GitHub Actions (CI/CD)
+
+
+🔗 KEY RESOURCES
+================================================================================
+
+Express.js Docs:
+  https://expressjs.com/
+
+Mongoose Docs:
+  https://mongoosejs.com/
+
+Ethers.js Docs:
+  https://docs.ethers.org/v6/
+
+MongoDB Docs:
+  https://docs.mongodb.com/
+
+
+📝 NOTES FOR BACKEND DEVELOPER
+================================================================================
+
+1. Smart Contract Details:
+   - Address: 0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+   - Network: Sepolia (11155111)
+   - Functions: createOrder, getOrder, updateOrderStatus, etc.
+   - Events: OrderCreated, OrderStatusUpdated, OrderCancelled
+
+2. Contract Parameters:
+   - createOrder(orderId, metadataHash)
+   - orderId: string (from backend, unique)
+   - metadataHash: IPFS hash or JSON hash
+
+3. Database Schema Relationships:
+   - Order 1:N StatusLog
+   - Order 1:N BlockchainEvent
+   - Order N:1 User
+
+4. API Response Format (Standardized):
+   {
+     "success": true/false,
+     "data": { ... },
+     "error": { code, message },
+     "timestamp": ISO string
+   }
+
+5. Event Sync Process:
+   - Contract emits OrderCreated event
+   - Event listener catches it
+   - Save to BlockchainEvent collection
+   - Update Order in database
+   - Frontend polls API or WebSocket to get updates
+
+6. Error Handling Strategy:
+   - Validation errors: 400
+   - Unauthorized: 401
+   - Not found: 404
+   - Server errors: 500
+   - Contract errors: 500 + detailed message
+
+7. Blockchain Integration Best Practices:
+   - Always validate addresses
+   - Handle gas estimation
+   - Implement retry logic
+   - Log all transactions
+   - Confirm before considering success
+
+8. Database Query Optimization:
+   - Use indexes on frequently queried fields
+   - Limit returned fields
+   - Implement pagination
+   - Cache where possible
+
+9. Security Considerations:
+   - Validate all inputs
+   - Don't expose private keys
+   - Use environment variables
+   - HTTPS in production
+   - CORS properly configured
+   - Rate limiting
+
+10. Monitoring & Logging:
+    - Log all API requests
+    - Log blockchain interactions
+    - Monitor error rates
+    - Track performance metrics
+
+
+================================================================================
+END OF BACKEND TASKS
+================================================================================
+Last Updated: 2026-01-20
+Status: Ready for Development
