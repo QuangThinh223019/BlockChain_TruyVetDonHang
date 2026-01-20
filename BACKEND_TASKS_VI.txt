@@ -1,0 +1,609 @@
+================================================================================
+BACKEND DEVELOPER - NODE.JS + EXPRESS DANH SÁCH CÔNG VIỆC
+Dự án: Hệ Thống Truy Vết Đơn Hàng Blockchain
+Ngày: 2026-01-20
+================================================================================
+
+📋 GIAI ĐOẠN 1: SETUP & MÔI TRƯỜNG
+================================================================================
+
+[ ] 1.1 - Khởi tạo Node.js project
+    Lệnh: mkdir backend && cd backend && npm init -y
+    
+[ ] 1.2 - Cài đặt core packages
+    npm install express mongoose dotenv cors axios ethers
+    npm install -D nodemon concurrently
+
+[ ] 1.3 - Tạo cấu trúc folder
+    backend/
+      ├── src/
+      │   ├── config/
+      │   │   ├── database.js
+      │   │   ├── blockchain.js
+      │   │   └── env.js
+      │   ├── models/
+      │   │   ├── Order.js
+      │   │   ├── StatusLog.js
+      │   │   ├── BlockchainEvent.js
+      │   │   └── User.js
+      │   ├── controllers/
+      │   │   ├── orderController.js
+      │   │   ├── statusController.js
+      │   │   └── eventController.js
+      │   ├── routes/
+      │   │   ├── orders.js
+      │   │   ├── status.js
+      │   │   └── events.js
+      │   ├── services/
+      │   │   ├── contractService.js
+      │   │   ├── orderService.js
+      │   │   ├── eventListenerService.js
+      │   │   └── blockchainService.js
+      │   ├── middleware/
+      │   │   ├── auth.js
+      │   │   ├── errorHandler.js
+      │   │   └── validation.js
+      │   ├── utils/
+      │   │   ├── logger.js
+      │   │   ├── validators.js
+      │   │   └── helpers.js
+      │   └── app.js
+      ├── routes/
+      ├── .env.example
+      ├── .env.local
+      ├── server.js
+      └── package.json
+
+[ ] 1.4 - Setup biến môi trường
+    Tạo: backend/.env.local
+    Nội dung:
+      PORT=5000
+      MONGODB_URI=mongodb://localhost:27017/order-tracking
+      CONTRACT_ADDRESS=0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+      SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+      ADMIN_PRIVATE_KEY=your_private_key
+      NODE_ENV=development
+      LOG_LEVEL=debug
+
+[ ] 1.5 - Tạo .env.example (cho repository)
+    Hiển thị template mà không có dữ liệu nhạy cảm
+
+
+📋 GIAI ĐOẠN 2: DATABASE & MODELS
+================================================================================
+
+[ ] 2.1 - Kết nối MongoDB
+    File: src/config/database.js
+    Hàm:
+      - connectDB(): Promise<void>
+      - disconnectDB(): Promise<void>
+      - getConnection(): Mongoose.Connection
+
+[ ] 2.2 - Model Đơn Hàng (Order)
+    File: src/models/Order.js
+    Trường schema:
+      - orderId (string, unique, required)
+      - metadataHash (string, required)
+      - status (enum: CREATED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)
+      - adminAddress (string, required)
+      - createdAt (timestamp, auto)
+      - updatedAt (timestamp, auto)
+      - lastBlockSync (number)
+      - txHash (string)
+
+[ ] 2.3 - Model Nhật ký Trạng thái (StatusLog)
+    File: src/models/StatusLog.js
+    Trường schema:
+      - orderId (ref to Order)
+      - status (string)
+      - timestamp (date)
+      - detailsHash (string)
+      - updatedBy (address)
+
+[ ] 2.4 - Model Sự kiện Blockchain (BlockchainEvent)
+    File: src/models/BlockchainEvent.js
+    Trường schema:
+      - eventName (OrderCreated, OrderStatusUpdated, etc.)
+      - orderId (string)
+      - blockNumber (number)
+      - txHash (string)
+      - indexed (boolean)
+      - timestamp (date)
+      - data (JSON)
+
+[ ] 2.5 - Model Người dùng (User)
+    File: src/models/User.js
+    Trường schema:
+      - address (wallet address, unique)
+      - role (admin, user, viewer)
+      - isActive (boolean)
+      - createdAt (timestamp)
+      - lastLogin (timestamp)
+
+[ ] 2.6 - Tạo indexes cho database
+    - Order: orderId (unique), status
+    - StatusLog: orderId, timestamp
+    - BlockchainEvent: txHash, blockNumber
+    - User: address (unique)
+
+
+📋 GIAI ĐOẠN 3: TÍCH HỢP BLOCKCHAIN
+================================================================================
+
+[ ] 3.1 - Cấu hình Smart Contract
+    File: src/config/blockchain.js
+    Load:
+      - Contract ABI (từ artifacts)
+      - Contract address
+      - Provider (Infura/Alchemy)
+      - Signer setup
+    Exports: provider, signer, contract
+
+[ ] 3.2 - Service Contract
+    File: src/services/contractService.js
+    Hàm:
+      - createOrder(orderId, metadataHash)
+      - getOrder(orderId)
+      - updateOrderStatus(orderId, status, detailsHash)
+      - getOrderHistory(orderId)
+      - cancelOrder(orderId)
+      - checkAdminAuth(address)
+    Xử lý lỗi + logic retry
+
+[ ] 3.3 - Service Blockchain
+    File: src/services/blockchainService.js
+    Hàm:
+      - validateTxHash(txHash)
+      - waitForConfirmation(txHash, confirmations)
+      - getGasPrice()
+      - estimateGas(functionCall)
+      - getBlockchainStatus()
+
+[ ] 3.4 - Service Lắng nghe Sự kiện
+    File: src/services/eventListenerService.js
+    Hàm:
+      - startListening(): void
+      - stopListening(): void
+      - onOrderCreated(event): Promise<void>
+      - onOrderStatusUpdated(event): Promise<void>
+      - onOrderCancelled(event): Promise<void>
+      - syncEventToDatabase(event): Promise<void>
+    Triển khai:
+      - Event polling hoặc WebSocket
+      - Database sync
+      - Error recovery
+
+
+📋 GIAI ĐOẠN 4: REST API ROUTES
+================================================================================
+
+[ ] 4.1 - Routes Đơn Hàng
+    File: src/routes/orders.js
+    
+    Endpoints:
+      GET /api/orders
+        Query: ?status=CREATED&limit=10&skip=0
+        Response: { orders: [...], total: number }
+      
+      POST /api/orders
+        Body: { orderId, metadataHash, adminAddress }
+        Response: { success, txHash, order }
+        Gọi: contract.createOrder()
+      
+      GET /api/orders/:orderId
+        Response: { chi tiết order + history }
+      
+      PUT /api/orders/:orderId
+        Body: { status, detailsHash }
+        Response: { success, txHash }
+        Gọi: contract.updateOrderStatus()
+      
+      DELETE /api/orders/:orderId
+        Response: { success, txHash }
+        Gọi: contract.cancelOrder()
+
+[ ] 4.2 - Routes Trạng thái
+    File: src/routes/status.js
+    
+    Endpoints:
+      GET /api/orders/:orderId/history
+        Response: { statusUpdates: [...] }
+      
+      GET /api/orders/:orderId/events
+        Response: { blockchainEvents: [...] }
+
+[ ] 4.3 - Routes Thống kê
+    File: src/routes/stats.js
+    
+    Endpoints:
+      GET /api/stats
+        Response: {
+          totalOrders,
+          pendingOrders,
+          completedOrders,
+          cancelledOrders,
+          lastUpdated
+        }
+      
+      GET /api/stats/by-status
+        Response: { status -> count mapping }
+
+[ ] 4.4 - Health Check
+    GET /api/health
+      Response: {
+        status: "ok",
+        database: "connected",
+        blockchain: "connected",
+        uptime: seconds
+      }
+
+
+📋 GIAI ĐOẠN 5: CONTROLLERS & SERVICES
+================================================================================
+
+[ ] 5.1 - Order Controller
+    File: src/controllers/orderController.js
+    Hàm:
+      - getAllOrders(req, res)
+      - getOrderById(req, res)
+      - createOrder(req, res)
+      - updateOrderStatus(req, res)
+      - cancelOrder(req, res)
+    Validation + xử lý lỗi
+
+[ ] 5.2 - Order Service (Business Logic)
+    File: src/services/orderService.js
+    Hàm:
+      - createOrderInDB(data)
+      - getOrderFromDB(orderId)
+      - updateOrderInDB(orderId, data)
+      - getOrderWithHistory(orderId)
+      - syncOrderWithBlockchain(orderId)
+    Thao tác DB + gọi contract
+
+[ ] 5.3 - Status Controller
+    File: src/controllers/statusController.js
+    Hàm:
+      - getOrderHistory(req, res)
+      - getBlockchainEvents(req, res)
+
+[ ] 5.4 - Middleware Validation
+    File: src/middleware/validation.js
+    Hàm:
+      - validateOrderCreation(req, res, next)
+      - validateStatusUpdate(req, res, next)
+      - validateOrderId(req, res, next)
+    Sử dụng: joi hoặc zod cho schema validation
+
+[ ] 5.5 - Middleware Xử lý Lỗi
+    File: src/middleware/errorHandler.js
+    Xử lý:
+      - 404 Not Found
+      - 400 Bad Request
+      - 500 Server Error
+      - Contract errors
+      - Database errors
+    Format error response nhất quán
+
+
+📋 GIAI ĐOẠN 6: SYNC SỰ KIỆN BLOCKCHAIN
+================================================================================
+
+[ ] 6.1 - Setup Lắng nghe Sự kiện
+    Bắt đầu lắng nghe contract events:
+      - OrderCreated
+      - OrderStatusUpdated
+      - OrderCancelled
+      - AdminAuthorizationChanged
+
+[ ] 6.2 - Hàm Xử lý Sự kiện
+    Khi OrderCreated event được phát hành:
+      1. Parse event data
+      2. Kiểm tra order tồn tại trong DB
+      3. Nếu không, insert order mới
+      4. Lưu event vào BlockchainEvent collection
+
+    Khi OrderStatusUpdated event được phát hành:
+      1. Parse event data
+      2. Cập nhật Order status trong DB
+      3. Thêm vào StatusLog collection
+      4. Lưu vào BlockchainEvent
+
+[ ] 6.3 - Sync Worker
+    File: src/services/eventListenerService.js
+    Chạy như background service:
+      - Kết nối blockchain
+      - Poll events (interval-based) hoặc WebSocket
+      - Xử lý events
+      - Retry lại sync thất bại
+      - Logging
+
+[ ] 6.4 - Tích hợp Startup
+    Trong server.js:
+      1. Kết nối MongoDB
+      2. Kết nối blockchain
+      3. Bắt đầu event listener
+      4. Bắt đầu Express server
+
+
+📋 GIAI ĐOẠN 7: MIDDLEWARE & UTILITIES
+================================================================================
+
+[ ] 7.1 - Setup CORS
+    File: src/app.js
+    Cho phép requests từ:
+      - http://localhost:3000 (dev frontend)
+      - https://yourdomain.com (production)
+
+[ ] 7.2 - Request Logging
+    File: src/middleware/logger.js
+    Log:
+      - Request method, path, status
+      - Response time
+      - Errors
+
+[ ] 7.3 - Utilities Validation Input
+    File: src/utils/validators.js
+    Hàm:
+      - isValidEthereumAddress(address)
+      - isValidOrderId(orderId)
+      - isValidMetadataHash(hash)
+      - isValidStatus(status)
+
+[ ] 7.4 - Helper Utilities
+    File: src/utils/helpers.js
+    Hàm:
+      - formatOrderResponse(order)
+      - formatEventResponse(event)
+      - calculateTimestamps()
+      - generateOrderId() [nếu cần]
+
+[ ] 7.5 - Rate Limiting (Tuỳ chọn)
+    Triển khai:
+      - 100 requests per 15 minutes per IP
+      - Chống spam/abuse
+
+
+📋 GIAI ĐOẠN 8: TESTING & DEPLOYMENT
+================================================================================
+
+[ ] 8.1 - Unit Tests
+    Framework: Jest
+    Test files:
+      - services/__tests__/contractService.test.js
+      - services/__tests__/orderService.test.js
+      - utils/__tests__/validators.test.js
+
+[ ] 8.2 - Integration Tests
+    Test scenarios:
+      - Tạo order (API → Contract → DB)
+      - Lấy order (API → DB)
+      - Cập nhật status (API → Contract → DB)
+      - Event listener sync
+
+[ ] 8.3 - API Documentation
+    Tool: Swagger/OpenAPI
+    Endpoints được document:
+      - Request/response schemas
+      - Error codes
+      - Examples
+
+[ ] 8.4 - Setup Environment
+    Tạo:
+      - .env.development
+      - .env.production
+      - .env.example
+
+[ ] 8.5 - Docker Setup (Tuỳ chọn)
+    Tạo: Dockerfile
+      - Node.js image
+      - Install dependencies
+      - Expose port 5000
+      - Run server
+
+[ ] 8.6 - Deployment
+    Lựa chọn:
+      - Heroku
+      - AWS EC2
+      - DigitalOcean
+      - Vercel (serverless)
+    Setup:
+      - Environment variables
+      - Database URL
+      - Blockchain RPC
+      - Logging/monitoring
+
+
+📋 GIAI ĐOẠN 9: CÁC TÍNH NĂNG BỔ SUNG (TUỲ CHỌN)
+================================================================================
+
+[ ] 9.1 - WebSocket Support
+    Real-time updates cho frontend:
+      - Đơn hàng mới được tạo
+      - Status được cập nhật
+      - Events được sync
+
+[ ] 9.2 - Caching Layer
+    Redis integration:
+      - Cache orders được truy cập thường xuyên
+      - Cache statistics
+      - Giảm database queries
+
+[ ] 9.3 - Authentication
+    JWT tokens:
+      - Admin authentication
+      - Protected routes
+      - Role-based access control
+
+[ ] 9.4 - Pagination & Filtering
+    Query parameters:
+      - ?page=1&limit=20
+      - ?status=CREATED&dateFrom=...&dateTo=...
+      - ?search=ORDER-001
+
+[ ] 9.5 - Performance Optimization
+    Kỹ thuật:
+      - Database query optimization
+      - Index usage
+      - Connection pooling
+      - Response compression
+
+
+🎯 THỨ TỰ ƯUTIÊN (MVP TRƯỚC)
+================================================================================
+
+🔴 QUAN TRỌNG (Bắt buộc):
+  1. Kết nối MongoDB & Model Order
+  2. Tích hợp smart contract (contractService)
+  3. REST API: POST /orders, GET /orders/:id
+  4. Event listener (blockchain sync)
+  5. Error handling middleware
+
+🟡 CAO (Nên có):
+  6. Tất cả CRUD endpoints
+  7. Tracking lịch sử status
+  8. Event synchronization
+  9. Input validation
+  10. Basic logging
+
+🟢 NICE-TO-HAVE (Có thể có):
+  11. WebSocket real-time updates
+  12. Redis caching
+  13. JWT authentication
+  14. Advanced filtering
+  15. Docker deployment
+
+
+💡 TECH STACK KHUYẾN NGHỊ
+================================================================================
+
+Runtime & Framework:
+  - Node.js 18+
+  - Express.js v4
+  - Nodemon (dev)
+
+Database:
+  - MongoDB 6+
+  - Mongoose v7 (ODM)
+
+Blockchain:
+  - ethers.js v6
+  - Infura/Alchemy cho RPC
+
+Validation:
+  - joi (schema validation)
+  - express-validator
+
+Utilities:
+  - dotenv (env variables)
+  - cors (cross-origin)
+  - body-parser (request parsing)
+  - axios (HTTP client)
+
+Logging:
+  - winston
+  - morgan (request logger)
+
+Testing:
+  - Jest (unit/integration)
+  - Supertest (API testing)
+
+Documentation:
+  - Swagger/OpenAPI
+  - Postman collection
+
+Deployment:
+  - Docker
+  - GitHub Actions (CI/CD)
+
+
+🔗 RESOURCES CHÍNH
+================================================================================
+
+Express.js Docs:
+  https://expressjs.com/
+
+Mongoose Docs:
+  https://mongoosejs.com/
+
+Ethers.js Docs:
+  https://docs.ethers.org/v6/
+
+MongoDB Docs:
+  https://docs.mongodb.com/
+
+
+📝 NOTES CHO BACKEND DEVELOPER
+================================================================================
+
+1. Chi tiết Smart Contract:
+   - Address: 0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8
+   - Network: Sepolia (11155111)
+   - Hàm: createOrder, getOrder, updateOrderStatus, etc.
+   - Events: OrderCreated, OrderStatusUpdated, OrderCancelled
+
+2. Parameters Contract:
+   - createOrder(orderId, metadataHash)
+   - orderId: string (từ backend, unique)
+   - metadataHash: IPFS hash hoặc JSON hash
+
+3. Quan hệ Schema Database:
+   - Order 1:N StatusLog
+   - Order 1:N BlockchainEvent
+   - Order N:1 User
+
+4. API Response Format (Tiêu chuẩn):
+   {
+     "success": true/false,
+     "data": { ... },
+     "error": { code, message },
+     "timestamp": ISO string
+   }
+
+5. Quy trình Event Sync:
+   - Contract phát hành OrderCreated event
+   - Event listener catch nó
+   - Lưu vào BlockchainEvent collection
+   - Cập nhật Order trong database
+   - Frontend poll API hoặc WebSocket để lấy updates
+
+6. Chiến lược Xử lý Lỗi:
+   - Validation errors: 400
+   - Unauthorized: 401
+   - Not found: 404
+   - Server errors: 500
+   - Contract errors: 500 + detailed message
+
+7. Best Practices Blockchain Integration:
+   - Luôn validate addresses
+   - Handle gas estimation
+   - Implement retry logic
+   - Log tất cả transactions
+   - Confirm trước khi consider success
+
+8. Optimization Database Query:
+   - Sử dụng indexes trên frequently queried fields
+   - Limit returned fields
+   - Implement pagination
+   - Cache nếu có thể
+
+9. Tính năng Bảo mật:
+   - Validate tất cả inputs
+   - Không expose private keys
+   - Sử dụng environment variables
+   - HTTPS trong production
+   - CORS được config đúng
+   - Rate limiting
+
+10. Monitoring & Logging:
+    - Log tất cả API requests
+    - Log blockchain interactions
+    - Monitor error rates
+    - Track performance metrics
+
+
+================================================================================
+KẾT THÚC DANH SÁCH CÔNG VIỆC BACKEND
+================================================================================
+Cập nhật lần cuối: 2026-01-20
+Status: Sẵn sàng để phát triển
