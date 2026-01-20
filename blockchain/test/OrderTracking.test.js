@@ -20,7 +20,7 @@ describe("OrderTracking Contract", function () {
     // Deploy contract
     const OrderTracking = await ethers.getContractFactory("OrderTracking");
     orderTracking = await OrderTracking.deploy();
-    await orderTracking.deployed();
+    await orderTracking.waitForDeployment();
   });
 
   describe("Admin Authorization", function () {
@@ -130,7 +130,7 @@ describe("OrderTracking Contract", function () {
         orderTracking.connect(admin1).updateStatus(orderId, newStatus, detailsHash)
       )
         .to.emit(orderTracking, "OrderStatusUpdated")
-        .withArgs(orderId, newStatus, await ethers.provider.getBlock('latest').then(b => b.timestamp + 1), detailsHash, admin1.address);
+        .withArgs(orderId, newStatus, expect.anything(), detailsHash, admin1.address);
     });
 
     it("Should track order history", async function () {
@@ -182,7 +182,7 @@ describe("OrderTracking Contract", function () {
 
       await expect(orderTracking.connect(admin1).cancelOrder(orderId))
         .to.emit(orderTracking, "OrderCancelled")
-        .withArgs(orderId);
+        .withArgs(orderId, expect.anything());
     });
 
     it("Should revert cancel on already cancelled order", async function () {

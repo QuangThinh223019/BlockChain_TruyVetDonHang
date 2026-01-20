@@ -5,6 +5,39 @@
 
 const mongoose = require('mongoose');
 
+// Connection helper function
+async function connectWithRetry() {
+    const options = {
+        serverSelectionTimeoutMS: 3000,
+        socketTimeoutMS: 10000,
+        connectTimeoutMS: 3000,
+        maxPoolSize: 5,
+        minPoolSize: 1,
+        maxIdleTimeMS: 30000,
+        heartbeatFrequencyMS: 10000
+    };
+    
+    try {
+        await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/order-tracking", options);
+        
+        // Wait for connection to be ready
+        await new Promise((resolve) => {
+            if (mongoose.connection.readyState === 1) {
+                resolve();
+            } else {
+                mongoose.connection.once('connected', resolve);
+            }
+        });
+        
+        // Test connection
+        await mongoose.connection.db.admin().ping();
+        console.log('✅ MongoDB connected successfully with optimized settings');
+    } catch (error) {
+        console.error('❌ MongoDB connection failed:', error.message);
+        throw error;
+    }
+}
+
 // ==================== ORDER MODEL ====================
 const orderSchema = new mongoose.Schema({
   orderId: {
@@ -305,6 +338,7 @@ const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 // ==================== EXPORT ====================
 module.exports = {
+  connectWithRetry,
   Order,
   StatusLog,
   IPFSReference,
