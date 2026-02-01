@@ -1,0 +1,7 @@
+{
+  "network": "cronosTestnet",
+  "contract": "OrderTracking",
+  "address": "0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8",
+  "deployer": "0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a",
+  "timestamp": "2026-01-20T12:28:52.394Z"
+}

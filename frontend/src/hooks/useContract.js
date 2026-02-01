@@ -45,7 +45,7 @@ export const useContract = () => {
   }, []);
 
   /**
-   * Kết nối ví MetaMask
+   * Kết nối ví MetaMask - luôn hiển thị popup để chọn tài khoản
    */
   const connectWallet = useCallback(async () => {
     console.log('🔄 Starting wallet connection...');
@@ -57,8 +57,33 @@ export const useContract = () => {
         throw new Error('MetaMask chưa được cài đặt');
       }
 
-      console.log('📡 Requesting accounts...');
-      // Request accounts
+      // Kiểm tra xem MetaMask có đang locked không
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length === 0) {
+          console.log('⚠️ MetaMask chưa được unlock hoặc chưa có tài khoản được kết nối');
+        }
+      } catch (e) {
+        console.log('⚠️ Không thể kiểm tra trạng thái MetaMask');
+      }
+
+      console.log('📡 Requesting accounts with popup...');
+      // Request wallet_requestPermissions để bắt buộc hiển thị popup chọn tài khoản
+      try {
+        await window.ethereum.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }]
+        });
+      } catch (permErr) {
+        // Nếu user từ chối permission, throw error
+        if (permErr.code === 4001) {
+          throw new Error('Bạn đã từ chối cấp quyền truy cập');
+        }
+        // Nếu lỗi khác, tiếp tục với eth_requestAccounts
+        console.log('Permission request failed, falling back to eth_requestAccounts');
+      }
+
+      // Request accounts sau khi đã yêu cầu permissions
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts'
       });
@@ -227,34 +252,17 @@ export const useContract = () => {
   }, []);
 
   /**
-   * Auto-reconnect khi page reload nếu đã kết nối trước đó
+   * Khởi tạo - không tự động kết nối, yêu cầu người dùng chọn tài khoản qua popup
    */
   useEffect(() => {
-    const checkAndReconnect = async () => {
+    const initializeApp = async () => {
       if (typeof window.ethereum === 'undefined') {
-        setInitializing(false);
-        return;
+        setError('Vui lòng cài đặt MetaMask để sử dụng ứng dụng');
       }
-
-      try {
-        // Check nếu đã có accounts được authorized
-        const accounts = await window.ethereum.request({
-          method: 'eth_accounts'
-        });
-
-        if (accounts.length > 0) {
-          console.log('🔄 Auto-reconnecting wallet...');
-          await connectWallet();
-        }
-      } catch (err) {
-        console.error('❌ Auto-reconnect failed:', err);
-      } finally {
-        setInitializing(false);
-      }
+      setInitializing(false);
     };
 
-    checkAndReconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    initializeApp();
   }, []);
 
   /**
