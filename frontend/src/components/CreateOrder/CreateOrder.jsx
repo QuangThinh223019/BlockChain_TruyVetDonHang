@@ -3,6 +3,7 @@ import { useOrder } from '../../hooks/useOrder';
 import { useContract } from '../../contexts/ContractContext';
 import { generateOrderId, isValidOrderId } from '../../utils/helpers';
 import { createMetadataHash, saveOrderMetadata } from '../../utils/orderMetadata';
+import apiService from '../../services/apiService';
 import './CreateOrder.css';
 
 const CreateOrder = ({ onOrderCreated }) => {
@@ -109,6 +110,31 @@ const CreateOrder = ({ onOrderCreated }) => {
       
       // Lưu metadata vào localStorage (với txHash)
       saveOrderMetadata(orderId, metadata);
+      
+      // Lưu metadata lên API/MongoDB để ai cũng tra cứu được
+      try {
+        await apiService.saveOrderMetadata(
+          orderId,
+          {
+            productName: formData.productName,
+            quantity: parseInt(formData.quantity),
+            price: formData.price,
+            totalAmount: parseInt(formData.quantity) * parseFloat(formData.price),
+            notes: formData.notes
+          },
+          {
+            name: formData.recipientName,
+            phone: formData.recipientPhone,
+            address: formData.recipientAddress
+          },
+          account, // sender address
+          result.txHash
+        );
+        console.log('✅ Metadata saved to database');
+      } catch (apiError) {
+        console.warn('⚠️ Failed to save metadata to database:', apiError);
+        // Không block user, chỉ log warning
+      }
       
       setTxHash(result.txHash);
       setSuccessMessage('✅ Tạo đơn hàng thành công! 🕒 Vui lòng đợi 10-30 giây để blockchain xác nhận, sau đó bạn có thể tra cứu đơn hàng.');

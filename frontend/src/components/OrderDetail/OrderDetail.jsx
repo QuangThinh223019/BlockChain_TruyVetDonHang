@@ -4,6 +4,7 @@ import { useContract } from '../../contexts/ContractContext';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../utils/constants';
 import { formatDate, truncateAddress, getEtherscanUrl, copyToClipboard } from '../../utils/web3Utils';
 import { getOrderMetadata } from '../../utils/orderMetadata';
+import apiService from '../../services/apiService';
 import './OrderDetail.css';
 
 const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
@@ -36,7 +37,27 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
         onOrderIdChange(trimmedOrderId);
       }
       
-      // Lấy metadata từ localStorage
+      // Ưu tiên lấy metadata từ API (MongoDB)
+      try {
+        const apiMetadata = await apiService.getOrderMetadata(trimmedOrderId);
+        if (apiMetadata) {
+          console.log('✅ Metadata loaded from API:', apiMetadata);
+          setMetadata(apiMetadata);
+          if (apiMetadata.txHash) {
+            setTxHash(apiMetadata.txHash);
+          }
+          
+          // Kiểm tra quyền sở hữu
+          if (account && apiMetadata.senderAddress) {
+            setIsCreator(account.toLowerCase() === apiMetadata.senderAddress.toLowerCase());
+          }
+          return;
+        }
+      } catch (apiError) {
+        console.log('⚠️ Could not load metadata from API, trying localStorage...');
+      }
+      
+      // Fallback: Lấy metadata từ localStorage
       const metadataData = getOrderMetadata(trimmedOrderId);
       setMetadata(metadataData);
       
@@ -74,6 +95,26 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
             onOrderIdChange(propOrderId.trim());
           }
           
+          // Ưu tiên lấy metadata từ API
+          try {
+            const apiMetadata = await apiService.getOrderMetadata(propOrderId.trim());
+            if (apiMetadata) {
+              console.log('✅ Metadata loaded from API:', apiMetadata);
+              setMetadata(apiMetadata);
+              if (apiMetadata.txHash) {
+                setTxHash(apiMetadata.txHash);
+              }
+              
+              if (account && apiMetadata.senderAddress) {
+                setIsCreator(account.toLowerCase() === apiMetadata.senderAddress.toLowerCase());
+              }
+              return;
+            }
+          } catch (apiError) {
+            console.log('⚠️ Could not load metadata from API, trying localStorage...');
+          }
+          
+          // Fallback: localStorage
           const metadataData = getOrderMetadata(propOrderId.trim());
           setMetadata(metadataData);
           
@@ -379,17 +420,6 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
               <span className="info-label">Cập nhật lần cuối:</span>
               <span className="info-value">
                 {formatDate(order.updatedAt)}
-              </span>
-            </div>
-
-            <div className="info-row">
-              <span className="info-label">Trạng thái hoạt động:</span>
-              <span className="info-value">
-                {order.isActive ? (
-                  <span className="active-badge">✅ Đang hoạt động</span>
-                ) : (
-                  <span className="inactive-badge">❌ Đã hủy</span>
-                )}
               </span>
             </div>
           </div>

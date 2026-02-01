@@ -59,27 +59,41 @@ class EnhancedBlockchainListener {
             const totalOrders = await this.contract.totalOrders();
             console.log(`📊 Current orders: ${totalOrders}`);
 
-            // Connect to MongoDB (optional)
+            // Connect to MongoDB (optional - không bắt buộc)
             if (MONGODB_URI) {
                 try {
                     console.log('📊 Connecting to MongoDB...');
                     
+                    const mongoTimeout = setTimeout(() => {
+                        console.log('⚠️ MongoDB connection timeout, continuing without database...');
+                    }, 5000);
+                    
                     await mongoose.connect(MONGODB_URI, {
-                        serverSelectionTimeoutMS: 3000,
-                        socketTimeoutMS: 10000,
-                        connectTimeoutMS: 3000,
+                        serverSelectionTimeoutMS: 2000,
+                        socketTimeoutMS: 5000,
+                        connectTimeoutMS: 2000,
                         maxPoolSize: 5,
                         minPoolSize: 1,
                         maxIdleTimeMS: 30000,
                         heartbeatFrequencyMS: 10000
                     });
                     
+                    clearTimeout(mongoTimeout);
+                    
                     // Wait for connection to be ready
-                    await new Promise((resolve) => {
+                    await new Promise((resolve, reject) => {
+                        const timeoutId = setTimeout(() => {
+                            reject(new Error('Connection timeout'));
+                        }, 2000);
+                        
                         if (mongoose.connection.readyState === 1) {
+                            clearTimeout(timeoutId);
                             resolve();
                         } else {
-                            mongoose.connection.once('connected', resolve);
+                            mongoose.connection.once('connected', () => {
+                                clearTimeout(timeoutId);
+                                resolve();
+                            });
                         }
                     });
                     
@@ -87,8 +101,12 @@ class EnhancedBlockchainListener {
                     await mongoose.connection.db.admin().ping();
                     console.log('✅ MongoDB connected');
                 } catch (error) {
-                    console.log('⚠️ MongoDB connection failed, running without database');
+                    console.log('⚠️ MongoDB connection failed:', error.message);
+                    console.log('⚠️ Continuing without database - events will not be saved');
+                    console.log('💡 To enable database: Install and start MongoDB or use MongoDB Atlas');
                 }
+            } else {
+                console.log('⚠️ No MONGODB_URI configured, running without database');
             }
 
             return true;

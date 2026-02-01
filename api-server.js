@@ -6,7 +6,10 @@
 const express = require('express');
 const cors = require('cors');
 const { ethers } = require('ethers');
+const mongoose = require('mongoose');
 require('dotenv').config();
+
+const { Order } = require('./database/schemas/models');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +18,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// MongoDB setup
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/order-tracking';
+let mongoConnected = false;
+
 // Blockchain setup
 const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
@@ -22,12 +29,26 @@ const contractAddress = process.env.CONTRACT_ADDRESS;
 
 let contract;
 
-// Initialize contract
+// Initialize contract and database
 async function initializeContract() {
     try {
         const contractArtifact = require('./blockchain/artifacts/contracts/OrderTracking.sol/OrderTracking.json');
         contract = new ethers.Contract(contractAddress, contractArtifact.abi, signer);
         console.log('✅ Smart contract initialized');
+        
+        // Connect to MongoDB
+        try {
+            await mongoose.connect(MONGODB_URI, {
+                serverSelectionTimeoutMS: 3000,
+                socketTimeoutMS: 10000,
+                connectTimeoutMS: 3000
+            });
+            mongoConnected = true;
+            console.log('✅ MongoDB connected');
+        } catch (dbError) {
+            console.warn('⚠️ MongoDB connection failed, running without database');
+        }
+        
         return true;
     } catch (error) {
         console.error('❌ Contract initialization failed:', error.message);
@@ -169,6 +190,109 @@ app.get('/api/orders/:orderId', async (req, res) => {
         
         res.status(500).json({
             error: 'Failed to get order',
+            message: error.message
+        });
+    }
+});
+
+// Get order metadata from MongoDB
+app.get('/api/orders/:orderId/metadata', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        if (!mongoConnected) {
+            return res.status(503).json({
+                error: 'Database not available',
+                message: 'MongoDB connection is not established'
+            });
+        }
+        
+        // Find order in MongoDB
+        const orderDoc = await Order.findOne({ orderId });
+        
+        if (!orderDoc) {
+            return res.status(404).json({
+                error: 'Order metadata not found',
+                orderId
+            });
+        }
+        
+        res.json({
+            orderId: orderDoc.orderId,
+            metadata: orderDoc.metadata,
+            recipient: orderDoc.recipient,
+            sender: orderDoc.sender,
+            productName: orderDoc.metadata?.productName,
+            productDescription: orderDoc.metadata?.productDescription,
+            quantity: orderDoc.metadata?.quantity,
+            price: orderDoc.metadata?.price,
+            recipientName: orderDoc.recipient?.name,
+            recipientPhone: orderDoc.recipient?.phone,
+            recipientAddress: orderDoc.recipient?.address
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to get order metadata',
+            message: error.message
+        });
+    }
+});
+
+// Save order metadata to MongoDB
+app.post('/api/orders/:orderId/metadata', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { metadata, recipient, sender, txHash } = req.body;
+        
+        if (!mongoConnected) {
+            return res.status(503).json({
+                error: 'Database not available',
+                message: 'MongoDB connection is not established'
+            });
+        }
+        
+        // Create or update order in MongoDB
+        const orderDoc = await Order.findOneAndUpdate(
+            { orderId },
+            {
+                orderId,
+                adminAddress: sender?.address || sender,
+                metadata: {
+                    productName: metadata?.productName,
+                    productDescription: metadata?.productDescription,
+                    quantity: metadata?.quantity,
+                    price: metadata?.price,
+                    totalAmount: metadata?.totalAmount || (metadata?.quantity * metadata?.price),
+                    sku: metadata?.sku,
+                    category: metadata?.category
+                },
+                recipient: {
+                    name: recipient?.name || metadata?.recipientName,
+                    phone: recipient?.phone || metadata?.recipientPhone,
+                    address: recipient?.address || metadata?.recipientAddress
+                },
+                sender: {
+                    name: sender?.name,
+                    address: sender?.address || sender,
+                    phone: sender?.phone
+                },
+                blockchainHash: txHash,
+                status: 'CREATED'
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        
+        res.json({
+            success: true,
+            orderId,
+            message: 'Metadata saved successfully',
+            data: orderDoc
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to save order metadata',
             message: error.message
         });
     }

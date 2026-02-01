@@ -77,6 +77,38 @@ class ApiService {
   }
 
   /**
+   * Lấy metadata đơn hàng từ database
+   */
+  async getOrderMetadata(orderId) {
+    try {
+      const response = await this.api.get(`/orders/${orderId}/metadata`);
+      return response;
+    } catch (error) {
+      console.error('getOrderMetadata error:', error);
+      // Return null nếu không tìm thấy thay vì throw error
+      return null;
+    }
+  }
+
+  /**
+   * Lưu metadata đơn hàng vào database
+   */
+  async saveOrderMetadata(orderId, metadata, recipient, sender, txHash) {
+    try {
+      const response = await this.api.post(`/orders/${orderId}/metadata`, {
+        metadata,
+        recipient,
+        sender,
+        txHash
+      });
+      return response;
+    } catch (error) {
+      console.error('saveOrderMetadata error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Tạo đơn hàng mới
    */
   async createOrder(orderData) {
