@@ -32,3 +32,5 @@
 {"timestamp":"2026-02-02T11:32:36.371Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
 {"timestamp":"2026-02-02T11:32:37.613Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
 {"timestamp":"2026-02-02T11:38:14.148Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770016446655-7090"}
+{"timestamp":"2026-02-02T12:46:10.877Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T12:46:21.381Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
