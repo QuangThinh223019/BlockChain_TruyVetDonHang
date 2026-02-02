@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOrder } from '../../hooks/useOrder';
+import { useOrderWithRetry } from '../../hooks/useOrderWithRetry';
 import { useContract } from '../../contexts/ContractContext';
 import { generateOrderId, isValidOrderId } from '../../utils/helpers';
 import { createMetadataHash, saveOrderMetadata } from '../../utils/orderMetadata';
@@ -10,10 +11,12 @@ const CreateOrder = ({ onOrderCreated }) => {
   const [orderId, setOrderId] = useState('');
   const [txHash, setTxHash] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Form fields cho thông tin đơn hàng
   const [formData, setFormData] = useState({
     recipientName: '',
+    recipientEmail: '',
     recipientPhone: '',
     recipientAddress: '',
     productName: '',
@@ -23,6 +26,7 @@ const CreateOrder = ({ onOrderCreated }) => {
   });
   
   const { createOrder, getOrder, loading, error } = useOrder();
+  const { getOrderWithRetry } = useOrderWithRetry();
   const { connected, account } = useContract();
 
   const handleGenerateOrderId = () => {
@@ -52,8 +56,8 @@ const CreateOrder = ({ onOrderCreated }) => {
     }
 
     // Validate form
-    if (!formData.recipientName || !formData.recipientPhone || !formData.recipientAddress) {
-      alert('Vui lòng điền đầy đủ thông tin người nhận!');
+    if (!formData.recipientName || !formData.recipientEmail || !formData.recipientPhone || !formData.recipientAddress) {
+      alert('Vui lòng điền đầy đủ thông tin người nhận (bao gồm email)!');
       return;
     }
 
@@ -83,12 +87,31 @@ const CreateOrder = ({ onOrderCreated }) => {
           }
         }
       }
+
+      // Helper function để retry lấy order sau khi tạo
+      const getOrderWithRetry = async (id, maxRetries = 8, delayMs = 1500) => {
+        for (let i = 0; i < maxRetries; i++) {
+          try {
+            const order = await getOrder(id);
+            if (order && order.orderId) {
+              return order;
+            }
+          } catch (err) {
+            console.log(`Retry ${i + 1}/${maxRetries} failed:`, err.message);
+            if (i < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+          }
+        }
+        throw new Error('Không thể lấy đơn hàng vừa tạo từ blockchain sau 8 lần thử. Vui lòng kiểm tra lại Transaction Hash.');
+      };
       
       // Tạo metadata từ form data (bao gồm cả địa chỉ gửi)
       const metadata = {
         orderId,
         senderAddress: account, // Địa chỉ ví đang đăng nhập
         recipientName: formData.recipientName,
+        recipientEmail: formData.recipientEmail,
         recipientPhone: formData.recipientPhone,
         recipientAddress: formData.recipientAddress,
         productName: formData.productName,
@@ -111,6 +134,23 @@ const CreateOrder = ({ onOrderCreated }) => {
       // Lưu metadata vào localStorage (với txHash)
       saveOrderMetadata(orderId, metadata);
       
+      setTxHash(result.txHash);
+      
+      // Thử lấy order sau khi tạo (với retry logic)
+      setIsVerifying(true);
+      console.log('⏳ Waiting for blockchain confirmation...');
+      try {
+        const confirmedOrder = await getOrderWithRetry(orderId, 10, 2000);
+        console.log('✅ Order confirmed on blockchain:', confirmedOrder);
+        setSuccessMessage('✅ Tạo đơn hàng thành công! Đơn hàng đã được ghi vào blockchain.\n\n📝 Mã đơn: ' + orderId + '\n\n✔️ Xác nhận: ✓ (đã tìm thấy trên blockchain)');
+      } catch (retryError) {
+        console.warn('⚠️ Could not verify order on blockchain:', retryError.message);
+        // Không block user, log warning nhưng vẫn hiển thị success
+        setSuccessMessage('✅ Đơn hàng đã được gửi lên blockchain!\n\n📝 Mã đơn: ' + orderId + '\n\n⏳ Xác nhận: ⏳ (đang chờ xác nhận)\n\n💡 Bạn có thể kiểm tra lại sau vài phút.');
+      } finally {
+        setIsVerifying(false);
+      }
+      
       // Lưu metadata lên API/MongoDB để ai cũng tra cứu được
       try {
         await apiService.saveOrderMetadata(
@@ -124,10 +164,11 @@ const CreateOrder = ({ onOrderCreated }) => {
           },
           {
             name: formData.recipientName,
+            email: formData.recipientEmail,
             phone: formData.recipientPhone,
             address: formData.recipientAddress
           },
-          account, // sender address
+          { address: account }, // sender object with address
           result.txHash
         );
         console.log('✅ Metadata saved to database');
@@ -136,13 +177,13 @@ const CreateOrder = ({ onOrderCreated }) => {
         // Không block user, chỉ log warning
       }
       
-      setTxHash(result.txHash);
-      setSuccessMessage('✅ Tạo đơn hàng thành công! 🕒 Vui lòng đợi 10-30 giây để blockchain xác nhận, sau đó bạn có thể tra cứu đơn hàng.');
+      setSuccessMessage('✅ Tạo đơn hàng thành công! 🕒 Đơn hàng đã được ghi lên blockchain.\n\n📝 Mã đơn: ' + orderId + '\n\n🔗 Transaction Hash: ' + result.txHash);
       
       // Reset form
       setOrderId('');
       setFormData({
         recipientName: '',
+        recipientEmail: '',
         recipientPhone: '',
         recipientAddress: '',
         productName: '',
@@ -157,6 +198,8 @@ const CreateOrder = ({ onOrderCreated }) => {
       }
     } catch (err) {
       console.error('Submit error:', err);
+      const errorMessage = err.message || 'Có lỗi xảy ra khi tạo đơn hàng';
+      setSuccessMessage(`❌ ${errorMessage}`);
     }
   };
 
@@ -200,6 +243,20 @@ const CreateOrder = ({ onOrderCreated }) => {
               value={formData.recipientName}
               onChange={handleInputChange}
               placeholder="Nhập tên người nhận"
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="recipientEmail">Email: <span className="required">*</span></label>
+            <input
+              type="email"
+              id="recipientEmail"
+              name="recipientEmail"
+              value={formData.recipientEmail}
+              onChange={handleInputChange}
+              placeholder="Nhập email người nhận (để nhận thông báo)"
               required
               disabled={loading}
             />
@@ -299,9 +356,9 @@ const CreateOrder = ({ onOrderCreated }) => {
         <button 
           type="submit" 
           className="btn btn-primary btn-submit"
-          disabled={loading || !connected}
+          disabled={loading || isVerifying || !connected}
         >
-          {loading ? '⏳ Đang xử lý...' : '✨ Tạo Đơn Hàng'}
+          {isVerifying ? '⏳ Đang xác nhận trên blockchain...' : loading ? '⏳ Đang xử lý...' : '✨ Tạo Đơn Hàng'}
         </button>
       </form>
 

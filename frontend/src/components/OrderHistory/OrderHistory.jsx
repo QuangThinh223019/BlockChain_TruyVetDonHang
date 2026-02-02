@@ -1,44 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOrder } from '../../hooks/useOrder';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useContract } from '../../contexts/ContractContext';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../utils/constants';
 import { formatDate, truncateAddress, timeAgo } from '../../utils/web3Utils';
 import './OrderHistory.css';
 
 const OrderHistory = ({ orderId }) => {
-  const [history, setHistory] = useState([]);
-  const { getOrderHistory, loading, error } = useOrder();
+  const [manualError, setManualError] = useState(null);
+  const { getOrderHistory } = useOrder();
   const { contract, readOnlyContract } = useContract();
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      if (!orderId) return;
-      
-      // Sử dụng contract hoặc readOnlyContract
-      const activeContract = contract || readOnlyContract;
-      if (!activeContract) {
-        console.log('⏳ Contract not initialized yet, will retry when available');
-        return;
-      }
+  // Callback để fetch history
+  const fetchHistoryData = useCallback(async () => {
+    if (!orderId) {
+      throw new Error('Vui lòng nhập mã đơn hàng');
+    }
 
+    const activeContract = contract || readOnlyContract;
+    if (!activeContract) {
+      throw new Error('Đang khởi tạo kết nối blockchain...');
+    }
+
+    try {
       console.log('📜 Loading history for order:', orderId);
-      console.log('🔗 Using contract:', contract ? 'connected wallet' : 'read-only');
+      const historyData = await getOrderHistory(orderId);
+      console.log('✅ History loaded:', historyData);
+      setManualError(null);
+      return historyData;
+    } catch (err) {
+      console.error('❌ Load history error:', err);
+      setManualError(err.message);
+      return [];
+    }
+  }, [orderId, getOrderHistory, contract, readOnlyContract]);
 
-      try {
-        const historyData = await getOrderHistory(orderId);
-        console.log('✅ History loaded:', historyData);
-        setHistory(historyData);
-      } catch (err) {
-        // Silently handle error, will be shown in parent UI
-        console.error('❌ Load history error:', err);
-        setHistory([]); // Reset history on error
-      }
-    };
+  // Auto-refresh history mỗi 10 giây khi có orderId (tránh lag)
+  const { 
+    data: historyData,
+    isLoading, 
+    isRefreshing, 
+    error: autoRefreshError 
+  } = useAutoRefresh(fetchHistoryData, [orderId], 10000, !!orderId);  // 10 seconds instead of 3
 
-    loadHistory();
-    // Remove getOrderHistory from deps to prevent infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId, contract, readOnlyContract]);
+  // Ensure history is always an array
+  const history = Array.isArray(historyData) ? historyData : [];
+  const displayError = manualError || autoRefreshError;
 
   if (!orderId) {
     return (
@@ -50,17 +57,24 @@ const OrderHistory = ({ orderId }) => {
 
   return (
     <div className="order-history">
-      <h3 className="history-title">📜 Lịch Sử Cập Nhật</h3>
+      <div className="history-header">
+        <h3 className="history-title">📜 Lịch Sử Cập Nhật</h3>
+        {isRefreshing && (
+          <span className="refresh-indicator" title="Đang cập nhật tự động...">
+            🔄 <span className="refresh-text">Cập nhật tự động</span>
+          </span>
+        )}
+      </div>
 
-      {loading && <p className="loading-message">⏳ Đang tải lịch sử...</p>}
+      {isLoading && <p className="loading-message">⏳ Đang tải lịch sử...</p>}
 
-      {error && <p className="error-message">❌ {error}</p>}
+      {displayError && <p className="error-message">❌ {displayError}</p>}
 
-      {!loading && !error && history.length === 0 && (
+      {!isLoading && !displayError && history.length === 0 && (
         <p className="empty-message">Chưa có lịch sử cập nhật</p>
       )}
 
-      {!loading && history.length > 0 && (
+      {history.length > 0 && (
         <div className="timeline">
           {history.map((item, index) => (
             <div key={index} className="timeline-item">

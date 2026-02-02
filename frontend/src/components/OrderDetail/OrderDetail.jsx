@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOrder } from '../../hooks/useOrder';
 import { useContract } from '../../contexts/ContractContext';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../utils/constants';
 import { formatDate, truncateAddress, getEtherscanUrl, copyToClipboard } from '../../utils/web3Utils';
 import { getOrderMetadata } from '../../utils/orderMetadata';
 import apiService from '../../services/apiService';
+import OrderHistory from '../OrderHistory/OrderHistory';
 import './OrderDetail.css';
 
 const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
@@ -18,24 +19,18 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
   const { getOrder, updateOrderStatus, loading, error } = useOrder();
   const { account, readOnlyContract, contract } = useContract();
 
-  const handleSearch = async (e) => {
-    e?.preventDefault();
-    
+  // Callback để fetch order data
+  const fetchOrderData = useCallback(async () => {
     if (!orderId || orderId.trim() === '') {
-      alert('Vui lòng nhập mã đơn hàng!');
-      return;
+      throw new Error('Vui lòng nhập mã đơn hàng');
     }
 
+    const trimmedOrderId = orderId.trim();
+    
     try {
-      const trimmedOrderId = orderId.trim();
       const orderData = await getOrder(trimmedOrderId);
       setOrder(orderData);
       setSelectedStatus(orderData.status.toString());
-      
-      // Notify parent component về orderId change
-      if (onOrderIdChange) {
-        onOrderIdChange(trimmedOrderId);
-      }
       
       // Ưu tiên lấy metadata từ API (MongoDB)
       try {
@@ -51,7 +46,7 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
           if (account && apiMetadata.senderAddress) {
             setIsCreator(account.toLowerCase() === apiMetadata.senderAddress.toLowerCase());
           }
-          return;
+          return orderData;
         }
       } catch (apiError) {
         console.log('⚠️ Could not load metadata from API, trying localStorage...');
@@ -72,79 +67,89 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
       } else {
         setIsCreator(false);
       }
+      
+      return orderData;
     } catch (err) {
-      // console.error('Search error:', err);
       setOrder(null);
       setMetadata(null);
       setTxHash(null);
       setIsCreator(false);
+      throw err;
+    }
+  }, [orderId, getOrder, account]);
+
+  const handleSearch = async (e) => {
+    e?.preventDefault();
+    
+    if (!orderId || orderId.trim() === '') {
+      alert('Vui lòng nhập mã đơn hàng!');
+      return;
+    }
+
+    try {
+      await fetchOrderData();
+    } catch (err) {
+      console.error('Search error:', err);
     }
   };
 
   useEffect(() => {
     if (propOrderId && propOrderId.trim() !== '') {
-      setOrderId(propOrderId);
+      const trimmedId = propOrderId.trim();
+      setOrderId(trimmedId);
+      
       // Tự động tra cứu khi có propOrderId từ URL
       const autoSearch = async () => {
         try {
-          const orderData = await getOrder(propOrderId.trim());
+          // Fetch data trực tiếp thay vì dùng callback
+          const orderData = await getOrder(trimmedId);
           setOrder(orderData);
           setSelectedStatus(orderData.status.toString());
           
-          if (onOrderIdChange) {
-            onOrderIdChange(propOrderId.trim());
-          }
-          
-          // Ưu tiên lấy metadata từ API
+          // Lấy metadata từ API
           try {
-            const apiMetadata = await apiService.getOrderMetadata(propOrderId.trim());
+            const apiMetadata = await apiService.getOrderMetadata(trimmedId);
             if (apiMetadata) {
-              console.log('✅ Metadata loaded from API:', apiMetadata);
               setMetadata(apiMetadata);
               if (apiMetadata.txHash) {
                 setTxHash(apiMetadata.txHash);
               }
-              
               if (account && apiMetadata.senderAddress) {
                 setIsCreator(account.toLowerCase() === apiMetadata.senderAddress.toLowerCase());
               }
-              return;
+            } else {
+              throw new Error('No API metadata');
             }
           } catch (apiError) {
-            console.log('⚠️ Could not load metadata from API, trying localStorage...');
+            // Fallback to localStorage
+            const metadataData = getOrderMetadata(trimmedId);
+            setMetadata(metadataData);
+            if (metadataData && metadataData.txHash) {
+              setTxHash(metadataData.txHash);
+            }
+            if (account && metadataData && metadataData.senderAddress) {
+              setIsCreator(account.toLowerCase() === metadataData.senderAddress.toLowerCase());
+            } else {
+              setIsCreator(false);
+            }
           }
           
-          // Fallback: localStorage
-          const metadataData = getOrderMetadata(propOrderId.trim());
-          setMetadata(metadataData);
-          
-          if (metadataData && metadataData.txHash) {
-            setTxHash(metadataData.txHash);
-          }
-          
-          if (account && metadataData && metadataData.senderAddress) {
-            setIsCreator(account.toLowerCase() === metadataData.senderAddress.toLowerCase());
-          } else {
-            setIsCreator(false);
+          if (onOrderIdChange) {
+            onOrderIdChange(trimmedId);
           }
         } catch (err) {
+          console.error('Auto search error:', err);
           setOrder(null);
           setMetadata(null);
-          setTxHash(null);
           setIsCreator(false);
         }
       };
+      
       autoSearch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propOrderId]);
+  }, [propOrderId, getOrder, account, onOrderIdChange]);
 
   const handleUpdateStatus = async () => {
-    if (!isCreator) {
-      alert('Bạn không có quyền cập nhật đơn hàng này!');
-      return;
-    }
-
     if (selectedStatus === order.status.toString()) {
       alert('Vui lòng chọn trạng thái mới!');
       return;
@@ -424,9 +429,9 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
             </div>
           </div>
 
-          {account && isCreator && order.isActive && getValidNextStatuses(order.status).length > 0 && (
+          {account && order.isActive && getValidNextStatuses(order.status).length > 0 && (
             <div className="update-status-section">
-              <h3>🔄 Cập Nhật Trạng Thái</h3>
+              <h3>🔄 Cập Nhật Trạng Thái {isCreator ? '(Creator)' : '(Admin)'}</h3>
               <div className="status-update-form">
                 <select 
                   value={selectedStatus}
@@ -467,9 +472,9 @@ const OrderDetail = ({ orderId: propOrderId, onOrderIdChange }) => {
             </div>
           )}
 
-          {!isCreator && order && account && (
-            <div className="viewer-note">
-              <p>👁️ <strong>Chế độ xem:</strong> Bạn không phải là người tạo đơn, chỉ có thể xem thông tin.</p>
+          {order && (
+            <div className="order-history-section">
+              <OrderHistory orderId={order.orderId} />
             </div>
           )}
         </div>

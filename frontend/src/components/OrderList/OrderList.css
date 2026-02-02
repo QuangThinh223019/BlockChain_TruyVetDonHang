@@ -77,41 +77,49 @@
 
 .status-badge {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.status-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .status-created {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #1e3a8a;
+  color: white;
 }
 
 .status-confirmed {
-  background: #e9d5ff;
-  color: #6b21a8;
+  background: #5b21b6;
+  color: white;
 }
 
 .status-shipped {
-  background: #fef3c7;
-  color: #92400e;
+  background: #b45309;
+  color: white;
 }
 
 .status-delivered {
-  background: #d1fae5;
-  color: #065f46;
+  background: #15803d;
+  color: white;
 }
 
 .status-cancelled {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #7c2d12;
+  color: white;
 }
 
 .status-default {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: #374151;
+  color: white;
 }
 
 .btn-view {

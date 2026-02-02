@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const { Order } = require('./database/schemas/models');
+const { initializeEmailService, notifyOrderCreated, notifyOrderStatusUpdated, notifyOrderDelivered } = require('./email-service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,9 @@ async function initializeContract() {
         const contractArtifact = require('./blockchain/artifacts/contracts/OrderTracking.sol/OrderTracking.json');
         contract = new ethers.Contract(contractAddress, contractArtifact.abi, signer);
         console.log('✅ Smart contract initialized');
+        
+        // Initialize email service
+        initializeEmailService();
         
         // Connect to MongoDB
         try {
@@ -245,7 +249,11 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
         const { orderId } = req.params;
         const { metadata, recipient, sender, txHash } = req.body;
         
+        console.log(`📥 POST /api/orders/${orderId}/metadata`);
+        console.log('Request body:', { metadata, recipient, sender, txHash });
+        
         if (!mongoConnected) {
+            console.warn('⚠️ MongoDB not connected');
             return res.status(503).json({
                 error: 'Database not available',
                 message: 'MongoDB connection is not established'
@@ -270,18 +278,46 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
                 recipient: {
                     name: recipient?.name || metadata?.recipientName,
                     phone: recipient?.phone || metadata?.recipientPhone,
-                    address: recipient?.address || metadata?.recipientAddress
+                    address: recipient?.address || metadata?.recipientAddress,
+                    email: recipient?.email || metadata?.recipientEmail
                 },
                 sender: {
                     name: sender?.name,
                     address: sender?.address || sender,
-                    phone: sender?.phone
+                    phone: sender?.phone,
+                    email: sender?.email
                 },
                 blockchainHash: txHash,
                 status: 'CREATED'
             },
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
+        
+        console.log(`✅ Order saved to MongoDB:`, orderDoc.orderId);
+        
+        // Send email notification if recipient email is provided
+        if (recipient?.email || metadata?.recipientEmail) {
+            const recipientEmail = recipient?.email || metadata?.recipientEmail;
+            const emailData = {
+                orderId,
+                productName: metadata?.productName,
+                quantity: metadata?.quantity,
+                price: metadata?.price,
+                recipientName: recipient?.name || metadata?.recipientName,
+                recipientPhone: recipient?.phone || metadata?.recipientPhone,
+                recipientAddress: recipient?.address || metadata?.recipientAddress,
+                metadataHash: txHash,
+                createdAt: new Date().toISOString()
+            };
+            
+            console.log(`📧 Sending order creation email to ${recipientEmail}`);
+            // Send email asynchronously (don't wait for it)
+            notifyOrderCreated(recipientEmail, emailData).then(() => {
+                console.log(`✅ Order creation email sent to ${recipientEmail}`);
+            }).catch(err => {
+                console.error('❌ Failed to send order creation email:', err.message);
+            });
+        }
         
         res.json({
             success: true,
@@ -291,6 +327,7 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
         });
 
     } catch (error) {
+        console.error('❌ Error in POST metadata:', error.message);
         res.status(500).json({
             error: 'Failed to save order metadata',
             message: error.message
@@ -298,7 +335,7 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
     }
 });
 
-// Update order status
+// Update order status - Only for email notification, blockchain already updated by frontend
 app.put('/api/orders/:orderId/status', async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -311,7 +348,7 @@ app.put('/api/orders/:orderId/status', async (req, res) => {
         }
 
         // Valid statuses
-        const validStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+        const validStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'CREATED', 'CONFIRMED'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({
                 error: 'Invalid status',
@@ -319,34 +356,81 @@ app.put('/api/orders/:orderId/status', async (req, res) => {
             });
         }
 
-        const detailsHash = ethers.keccak256(
-            ethers.toUtf8Bytes(details || `${status}_${Date.now()}`)
-        );
-
-        // Estimate gas
-        const gasEstimate = await contract.updateStatus.estimateGas(orderId, status, detailsHash);
-        
-        // Send transaction
-        const tx = await contract.updateStatus(orderId, status, detailsHash, {
-            gasLimit: gasEstimate * 120n / 100n
-        });
-
-        // Wait for confirmation
-        const receipt = await tx.wait();
+        // Send email notification if MongoDB is connected
+        if (mongoConnected) {
+            try {
+                console.log(`📧 Searching for order: ${orderId}`);
+                const orderDoc = await Order.findOne({ orderId });
+                
+                if (orderDoc) {
+                    console.log(`✅ Order found in MongoDB`);
+                    console.log(`📧 Recipient email: ${orderDoc.recipient?.email}`);
+                    
+                    if (orderDoc.recipient?.email) {
+                        // Map status string to number for email template
+                        const statusMap = {
+                            'CREATED': '0',
+                            'PROCESSING': '1',
+                            'CONFIRMED': '1',  // Confirmed
+                            'SHIPPED': '2',      // Shipping
+                            'DELIVERED': '3',    // Delivered
+                            'CANCELLED': '4'     // Cancelled
+                        };
+                        
+                        const emailData = {
+                            orderId,
+                            status: statusMap[status] || '0',
+                            productName: orderDoc.metadata?.productName,
+                            quantity: orderDoc.metadata?.quantity,
+                            price: orderDoc.metadata?.price,
+                            recipientName: orderDoc.recipient?.name,
+                            updatedAt: new Date().toISOString(),
+                            notes: details
+                        };
+                        
+                        console.log(`📧 Preparing email with status: ${emailData.status} (${status})`);
+                        
+                        // Send email asynchronously
+                        if (status === 'DELIVERED') {
+                            console.log(`📧 Sending delivery notification...`);
+                            emailData.deliveredAt = new Date().toISOString();
+                            notifyOrderDelivered(orderDoc.recipient.email, emailData).then(() => {
+                                console.log(`✅ Delivery notification sent to ${orderDoc.recipient.email}`);
+                            }).catch(err => {
+                                console.error('❌ Failed to send delivery notification:', err.message);
+                            });
+                        } else {
+                            console.log(`📧 Sending status update email...`);
+                            notifyOrderStatusUpdated(orderDoc.recipient.email, emailData).then(() => {
+                                console.log(`✅ Status update email sent to ${orderDoc.recipient.email}`);
+                            }).catch(err => {
+                                console.error('❌ Failed to send status update email:', err.message);
+                            });
+                        }
+                    } else {
+                        console.warn(`⚠️ No recipient email found for order ${orderId}`);
+                    }
+                } else {
+                    console.warn(`⚠️ Order not found in MongoDB: ${orderId}`);
+                }
+            } catch (emailError) {
+                console.error('❌ Error sending status update email:', emailError.message);
+            }
+        } else {
+            console.warn('⚠️ MongoDB not connected, email not sent');
+        }
 
         res.json({
             success: true,
             orderId,
             newStatus: status,
             details,
-            transactionHash: tx.hash,
-            blockNumber: receipt.blockNumber,
-            gasUsed: receipt.gasUsed.toString()
+            message: 'Status update notification sent'
         });
 
     } catch (error) {
         res.status(500).json({
-            error: 'Failed to update order status',
+            error: 'Failed to process status update',
             message: error.message
         });
     }

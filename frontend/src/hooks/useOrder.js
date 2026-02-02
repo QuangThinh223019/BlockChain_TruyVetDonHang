@@ -68,7 +68,20 @@ export const useOrder = () => {
    */
   const getOrder = useCallback(async (orderId) => {
     // Sử dụng contract nếu đã kết nối, nếu không dùng readOnlyContract
-    const activeContract = contract || readOnlyContract;
+    let activeContract = contract || readOnlyContract;
+    
+    // Retry logic: Nếu contract chưa sẵn sàng, đợi và thử lại
+    if (!activeContract) {
+      console.log('⏳ Contract not ready, waiting...');
+      for (let i = 0; i < 5; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi 1 giây
+        activeContract = contract || readOnlyContract;
+        if (activeContract) {
+          console.log(`✅ Contract ready after ${(i + 1)} second(s)`);
+          break;
+        }
+      }
+    }
     
     if (!activeContract) {
       throw new Error('Đang khởi tạo kết nối blockchain... Vui lòng thử lại sau vài giây.');
@@ -165,6 +178,29 @@ export const useOrder = () => {
 
       const receipt = await tx.wait();
       console.log('Transaction confirmed:', receipt);
+
+      // Sau khi blockchain transaction thành công, gọi API để gửi email
+      try {
+        console.log('📧 Calling API to send status update email...');
+        const apiResponse = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api'}/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: statusString,
+            details: detailsHash || `Status updated to ${statusString}`
+          })
+        });
+
+        if (apiResponse.ok) {
+          const apiData = await apiResponse.json();
+          console.log('✅ API response:', apiData);
+        } else {
+          console.warn('⚠️ API returned status:', apiResponse.status);
+        }
+      } catch (apiErr) {
+        console.error('⚠️ API call failed (non-critical):', apiErr.message);
+        // Không throw error vì blockchain transaction đã thành công
+      }
 
       return {
         success: true,

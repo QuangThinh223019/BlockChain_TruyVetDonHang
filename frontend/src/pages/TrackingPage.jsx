@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import OrderDetail from '../components/OrderDetail/OrderDetail';
-import OrderHistory from '../components/OrderHistory/OrderHistory';
 import './TrackingPage.css';
 
 const TrackingPage = () => {
@@ -34,12 +33,6 @@ const TrackingPage = () => {
         <div className="tracking-section">
           <OrderDetail orderId={orderId} onOrderIdChange={handleOrderIdChange} />
         </div>
-
-        {orderId && (
-          <div className="history-section">
-            <OrderHistory orderId={orderId} />
-          </div>
-        )}
       </div>
     </div>
   );
