@@ -130,8 +130,24 @@ const orderSchema = new mongoose.Schema({
   }
 });
 
-// Geospatial index cho tìm kiếm theo vị trí
+// Indexes for performance optimization
+// Single field indexes
+orderSchema.index({ orderId: 1 }, { unique: true });
+orderSchema.index({ status: 1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ 'recipient.email': 1 });
+orderSchema.index({ adminAddress: 1 });
+
+// Compound indexes for common queries
+orderSchema.index({ status: 1, createdAt: -1 }); // Filter by status and sort by date
+orderSchema.index({ orderId: 1, status: 1 });
+orderSchema.index({ adminAddress: 1, createdAt: -1 }); // User's orders
+
+// Geospatial index for location-based search
 orderSchema.index({ 'recipient.coordinates': '2dsphere' });
+
+// TTL index for automatic cleanup of old records (optional)
+// orderSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 }); // 30 days
 
 const Order = mongoose.model('Order', orderSchema);
 
@@ -168,6 +184,11 @@ const statusLogSchema = new mongoose.Schema({
   }
 });
 
+// Indexes for status logs
+statusLogSchema.index({ orderId: 1, timestamp: -1 }); // Get order history
+statusLogSchema.index({ status: 1, timestamp: -1 });
+statusLogSchema.index({ blockchainTxHash: 1 });
+
 const StatusLog = mongoose.model('StatusLog', statusLogSchema);
 
 // ==================== IPFS REFERENCE MODEL ====================
@@ -202,6 +223,11 @@ const ipfsReferenceSchema = new mongoose.Schema({
   description: String,
   cid: String // Content ID từ IPFS
 });
+
+// Indexes for IPFS references
+ipfsReferenceSchema.index({ orderId: 1, uploadedAt: -1 });
+ipfsReferenceSchema.index({ type: 1, uploadedAt: -1 });
+ipfsReferenceSchema.index({ uploadedBy: 1 });
 
 const IPFSReference = mongoose.model('IPFSReference', ipfsReferenceSchema);
 
@@ -241,6 +267,11 @@ const userSchema = new mongoose.Schema({
   },
   lastLogin: Date
 });
+
+// Indexes for user queries
+userSchema.index({ address: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { sparse: true });
+userSchema.index({ role: 1 });
 
 const User = mongoose.model('User', userSchema);
 
