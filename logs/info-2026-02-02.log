@@ -28,3 +28,20 @@
 {"timestamp":"2026-02-02T11:30:00.223Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
 {"timestamp":"2026-02-02T11:30:01.353Z","level":"INFO","message":"MongoDB connected successfully"}
 {"timestamp":"2026-02-02T11:30:01.358Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:32:42.058Z","level":"INFO","message":"Shutting down server"}
+{"timestamp":"2026-02-02T11:32:45.246Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:32:45.252Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:32:46.435Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:32:46.441Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:33:54.607Z","level":"INFO","message":"POST /api/orders/:orderId/metadata","orderId":"ORD-1770031992326-7027","metadata":{"productName":"Sáp vuốt tóc","quantity":1,"price":"50000","totalAmount":50000,"notes":""},"recipient":{"name":"Lệ","email":"socialcqt@gmail.com","phone":"0842233252","address":"Lai Vung 66"}}
+{"timestamp":"2026-02-02T11:33:54.705Z","level":"INFO","message":"Order saved to MongoDB","orderId":"ORD-1770031992326-7027"}
+{"timestamp":"2026-02-02T11:33:54.708Z","level":"INFO","message":"Sending order creation email","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T11:33:57.324Z","level":"INFO","message":"Order creation email sent","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T11:34:19.692Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770031992326-7027"}
+{"timestamp":"2026-02-02T11:34:19.734Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770031992326-7027"}
+{"timestamp":"2026-02-02T11:34:19.737Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T11:34:22.483Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770031992326-7027","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T11:37:00.663Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770031992326-7027"}
+{"timestamp":"2026-02-02T11:37:00.705Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770031992326-7027"}
+{"timestamp":"2026-02-02T11:37:00.707Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"SHIPPED"}
+{"timestamp":"2026-02-02T11:37:03.629Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770031992326-7027","status":"SHIPPED"}
