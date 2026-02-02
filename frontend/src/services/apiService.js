@@ -200,6 +200,59 @@ class ApiService {
       throw error;
     }
   }
+
+  /**
+   * Cập nhật vị trí đơn hàng (GPS tracking)
+   */
+  async updateOrderLocation(orderId, { latitude, longitude, address, city, shipper, details, status }) {
+    try {
+      const response = await this.api.post(`/orders/${orderId}/location`, {
+        latitude,
+        longitude,
+        address,
+        city,
+        shipper,
+        details,
+        status
+      });
+      return response;
+    } catch (error) {
+      console.error('updateOrderLocation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy lịch sử vị trí của đơn hàng
+   */
+  async getOrderLocationHistory(orderId, { limit = 50, skip = 0 } = {}) {
+    try {
+      const response = await this.api.get(`/orders/${orderId}/location-history`, {
+        params: { limit, skip }
+      });
+      return response;
+    } catch (error) {
+      console.error('getOrderLocationHistory error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tìm các đơn hàng gần đây (trong bán kính nhất định)
+   */
+  async findNearbyOrders({ latitude, longitude, maxDistance = 5000 }) {
+    try {
+      const response = await this.api.post('/orders/nearby', {
+        latitude,
+        longitude,
+        maxDistance
+      });
+      return response;
+    } catch (error) {
+      console.error('findNearbyOrders error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

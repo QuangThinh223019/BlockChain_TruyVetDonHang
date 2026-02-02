@@ -352,6 +352,66 @@ const auditLogSchema = new mongoose.Schema({
 
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
+// ==================== LOCATION HISTORY MODEL ====================
+const locationHistorySchema = new mongoose.Schema({
+  orderId: {
+    type: String,
+    required: true
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    required: true
+  },
+  coordinates: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true
+    }
+  },
+  address: String,
+  city: String,
+  province: String,
+  postalCode: String,
+  country: String,
+  shipper: {
+    name: String,
+    phone: String,
+    address: String
+  },
+  status: {
+    type: String,
+    enum: ['IN_TRANSIT', 'ARRIVED', 'DELAYED', 'DELIVERED'],
+    default: 'IN_TRANSIT'
+  },
+  details: {
+    temperature: Number,        // Nhiệt độ môi trường
+    humidity: Number,           // Độ ẩm
+    speed: Number,              // Tốc độ di chuyển (km/h)
+    altitude: Number,           // Độ cao
+    accuracy: Number,           // Độ chính xác GPS (meter)
+    heading: Number,            // Hướng di chuyển (0-360 độ)
+    notes: String
+  },
+  images: [String],             // IPFS hashes of images
+  verifiedBy: String,           // Address of person who verified location
+  blockchainTxHash: String      // Transaction hash nếu được ghi lên blockchain
+});
+
+// Indexes for location queries
+locationHistorySchema.index({ orderId: 1, timestamp: -1 });
+locationHistorySchema.index({ coordinates: '2dsphere' });        // For geospatial queries
+locationHistorySchema.index({ 'shipper.name': 1, timestamp: -1 });
+locationHistorySchema.index({ status: 1, timestamp: -1 });
+locationHistorySchema.index({ city: 1, timestamp: -1 });
+
+const LocationHistory = mongoose.model('LocationHistory', locationHistorySchema);
+
 // ==================== EXPORT ====================
 module.exports = {
   connectWithRetry,
@@ -361,5 +421,6 @@ module.exports = {
   User,
   Statistics,
   BlockchainEvent,
-  AuditLog
+  AuditLog,
+  LocationHistory
 };

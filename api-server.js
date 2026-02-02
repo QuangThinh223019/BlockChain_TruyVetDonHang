@@ -15,7 +15,7 @@ const CacheService = require('./cache-service');
 const { createOrderValidation, updateStatusValidation, getOrderValidation, listOrdersValidation, handleValidationErrors, sanitizeInput } = require('./validation');
 const logger = require('./logger');
 
-const { Order } = require('./database/schemas/models');
+const { Order, LocationHistory } = require('./database/schemas/models');
 const { initializeEmailService, notifyOrderCreated, notifyOrderStatusUpdated, notifyOrderDelivered } = require('./email-service');
 
 const app = express();
@@ -797,6 +797,199 @@ async function startServer() {
 process.on('SIGINT', () => {
     logger.info('Shutting down server');
     process.exit(0);
+});
+
+// ==================== GPS LOCATION TRACKING ====================
+
+// Update order location
+app.post('/api/orders/:orderId/location', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { latitude, longitude, address, city, shipper, details, status } = req.body;
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                success: false,
+                error: 'Latitude and longitude are required'
+            });
+        }
+
+        if (!mongoConnected) {
+            return res.status(503).json({
+                success: false,
+                error: 'Database not available'
+            });
+        }
+
+        // Create location record
+        const locationRecord = new LocationHistory({
+            orderId,
+            timestamp: new Date(),
+            coordinates: {
+                type: 'Point',
+                coordinates: [longitude, latitude] // GeoJSON format: [long, lat]
+            },
+            address: address || '',
+            city: city || '',
+            shipper: shipper || {},
+            status: status || 'IN_TRANSIT',
+            details: details || {}
+        });
+
+        await locationRecord.save();
+
+        // Invalidate cache
+        cache.delete(`location:${orderId}`);
+        cache.delete('stats');
+
+        logger.info('Location updated', { orderId, coordinates: [latitude, longitude] });
+        
+        res.json({
+            success: true,
+            orderId,
+            location: {
+                latitude,
+                longitude,
+                timestamp: locationRecord.timestamp,
+                address
+            },
+            message: 'Location updated successfully'
+        });
+
+    } catch (error) {
+        logger.error('Failed to update location', { error: error.message, orderId: req.params.orderId });
+        res.status(500).json({
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
+        });
+    }
+});
+
+// Get order location history
+app.get('/api/orders/:orderId/location-history', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { limit = 50, skip = 0 } = req.query;
+
+        if (!mongoConnected) {
+            return res.status(503).json({
+                success: false,
+                error: 'Database not available'
+            });
+        }
+
+        // Check cache first
+        const cacheKey = `location:${orderId}:history`;
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            logger.debug('Location history from cache', { orderId });
+            return res.json(cached);
+        }
+
+        const locations = await LocationHistory.find({ orderId })
+            .sort({ timestamp: -1 })
+            .limit(parseInt(limit))
+            .skip(parseInt(skip))
+            .select('timestamp coordinates address city status details');
+
+        if (locations.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'No location history found for this order'
+            });
+        }
+
+        const result = {
+            success: true,
+            orderId,
+            totalLocations: locations.length,
+            locations: locations.map(loc => ({
+                timestamp: loc.timestamp,
+                latitude: loc.coordinates.coordinates[1],
+                longitude: loc.coordinates.coordinates[0],
+                address: loc.address,
+                city: loc.city,
+                status: loc.status,
+                details: loc.details
+            }))
+        };
+
+        // Cache for 5 minutes
+        cache.set(cacheKey, result, 300);
+
+        logger.http('Location history retrieved', { orderId, count: locations.length });
+        res.json(result);
+
+    } catch (error) {
+        logger.error('Failed to get location history', { error: error.message, orderId: req.params.orderId });
+        res.status(500).json({
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
+        });
+    }
+});
+
+// Find orders nearby (within radius)
+app.post('/api/orders/nearby', async (req, res) => {
+    try {
+        const { latitude, longitude, maxDistance = 5000 } = req.body; // maxDistance in meters
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                success: false,
+                error: 'Latitude and longitude are required'
+            });
+        }
+
+        if (!mongoConnected) {
+            return res.status(503).json({
+                success: false,
+                error: 'Database not available'
+            });
+        }
+
+        const nearbyLocations = await LocationHistory.find({
+            coordinates: {
+                $near: {
+                    $geometry: {
+                        type: 'Point',
+                        coordinates: [longitude, latitude]
+                    },
+                    $maxDistance: maxDistance
+                }
+            }
+        })
+        .sort({ timestamp: -1 })
+        .limit(20)
+        .select('orderId timestamp coordinates address city status');
+
+        logger.http('Nearby orders found', { count: nearbyLocations.length, latitude, longitude });
+
+        res.json({
+            success: true,
+            latitude,
+            longitude,
+            maxDistance,
+            totalOrders: nearbyLocations.length,
+            orders: nearbyLocations.map(loc => ({
+                orderId: loc.orderId,
+                timestamp: loc.timestamp,
+                latitude: loc.coordinates.coordinates[1],
+                longitude: loc.coordinates.coordinates[0],
+                address: loc.address,
+                city: loc.city,
+                status: loc.status,
+                distance: loc.geometry?.distance || 'unknown'
+            }))
+        });
+
+    } catch (error) {
+        logger.error('Failed to find nearby orders', { error: error.message });
+        res.status(500).json({
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
+        });
+    }
 });
 
 // Debug endpoint - List all orders
