@@ -43,25 +43,21 @@ const orderSchema = new mongoose.Schema({
   orderId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   adminAddress: {
     type: String,
     required: true,
-    lowercase: true,
-    index: true
+    lowercase: true
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   status: {
     type: String,
     enum: ['CREATED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
-    default: 'CREATED',
-    index: true
+    default: 'CREATED'
   },
   blockchainHash: {
     type: String,
@@ -132,7 +128,6 @@ const orderSchema = new mongoose.Schema({
 
 // Indexes for performance optimization
 // Single field indexes
-orderSchema.index({ orderId: 1 }, { unique: true });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ 'recipient.email': 1 });
@@ -155,28 +150,25 @@ const Order = mongoose.model('Order', orderSchema);
 const statusLogSchema = new mongoose.Schema({
   orderId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   status: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   timestamp: {
     type: Date,
-    required: true,
-    index: true
+    required: true
   },
   details: {
     location: String,
     notes: String,
     handler: String,
     contactPhone: String,
-    temperature: Number, // Nếu vận chuyển hàng cảm nhiệt
-    humidity: Number     // Nếu vận chuyển hàng cảm nhiệt
+    temperature: Number,
+    humidity: Number
   },
-  attachments: [String], // Array of IPFS hashes
+  attachments: [String],
   blockchainTxHash: String,
   updatedBy: {
     type: String,
@@ -185,7 +177,7 @@ const statusLogSchema = new mongoose.Schema({
 });
 
 // Indexes for status logs
-statusLogSchema.index({ orderId: 1, timestamp: -1 }); // Get order history
+statusLogSchema.index({ orderId: 1, timestamp: -1 });
 statusLogSchema.index({ status: 1, timestamp: -1 });
 statusLogSchema.index({ blockchainTxHash: 1 });
 
@@ -196,12 +188,10 @@ const ipfsReferenceSchema = new mongoose.Schema({
   ipfsHash: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   orderId: {
-    type: String,
-    index: true
+    type: String
   },
   type: {
     type: String,
@@ -213,8 +203,7 @@ const ipfsReferenceSchema = new mongoose.Schema({
   mimeType: String,
   uploadedAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   uploadedBy: {
     type: String,
@@ -237,13 +226,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    lowercase: true,
-    index: true
+    lowercase: true
   },
   name: String,
   email: {
     type: String,
-    unique: true,
     sparse: true
   },
   phone: String,
@@ -269,8 +256,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for user queries
-userSchema.index({ address: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { sparse: true });
 userSchema.index({ role: 1 });
 
 const User = mongoose.model('User', userSchema);

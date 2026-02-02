@@ -1,0 +1,27 @@
+{"timestamp":"2026-02-02T11:18:44.340Z","level":"WARN","message":"MongoDB connection attempt 1 failed, retrying in 2000ms","error":"C02D0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:916:SSL alert number 80\n"}
+{"timestamp":"2026-02-02T11:19:18.184Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:19:26.575Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770020800408-3729"}
+{"timestamp":"2026-02-02T11:19:42.953Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770020800408-3729"}
+{"timestamp":"2026-02-02T11:20:22.784Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:20:29.380Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770020800408-3729"}
+{"timestamp":"2026-02-02T11:20:30.783Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770020800408-3729"}
+{"timestamp":"2026-02-02T11:20:33.169Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T11:20:34.276Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T11:20:34.715Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T11:20:34.881Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T11:20:35.057Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T11:20:36.768Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T11:20:39.266Z","level":"WARN","message":"Endpoint not found","path":"/dashboard","method":"GET"}
+{"timestamp":"2026-02-02T11:22:36.356Z","level":"WARN","message":"Endpoint not found","path":"/manifest.json","method":"GET"}
+{"timestamp":"2026-02-02T11:22:36.365Z","level":"WARN","message":"Endpoint not found","path":"/.well-known/appspecific/com.chrome.devtools.json","method":"GET"}
+{"timestamp":"2026-02-02T11:22:36.580Z","level":"WARN","message":"Endpoint not found","path":"/static/js/bundle.js.map","method":"GET"}
+{"timestamp":"2026-02-02T11:23:29.411Z","level":"WARN","message":"MongoDB connection attempt 1 failed, retrying in 2000ms","error":"Connection pool for ac-xmhg3nm-shard-00-01.jxqxjna.mongodb.net:27017 was cleared because another operation failed with: \"543C0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:c:\\ws\\deps\\openssl\\openssl\\ssl\\record\\rec_layer_s3.c:916:SSL alert number 80\n\""}
+{"timestamp":"2026-02-02T11:23:33.786Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:23:38.781Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:23:47.773Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:24:04.778Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:24:37.803Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:25:42.809Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:27:10.260Z","level":"WARN","message":"Endpoint not found","path":"/.well-known/appspecific/com.chrome.devtools.json","method":"GET"}
+{"timestamp":"2026-02-02T11:27:10.290Z","level":"WARN","message":"Endpoint not found","path":"/static/js/bundle.js.map","method":"GET"}
+{"timestamp":"2026-02-02T11:27:51.786Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}

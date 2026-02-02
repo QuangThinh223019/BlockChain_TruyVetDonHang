@@ -1,0 +1,26 @@
+{"timestamp":"2026-02-02T11:18:43.497Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:18:43.501Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:18:46.930Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:18:46.934Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:22:18.408Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:22:18.433Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:22:19.792Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:22:19.801Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:23:28.295Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:23:28.299Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:23:32.143Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:23:32.147Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:24:27.160Z","level":"INFO","message":"Shutting down server"}
+{"timestamp":"2026-02-02T11:24:29.526Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:24:29.531Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:24:30.758Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:24:30.762Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:24:46.178Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:24:46.188Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:24:46.964Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:24:46.968Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:25:23.564Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T11:25:23.568Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T11:25:24.358Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T11:25:24.363Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T11:28:07.646Z","level":"INFO","message":"Shutting down server"}

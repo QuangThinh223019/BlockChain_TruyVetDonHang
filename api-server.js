@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const cors = require('cors');
 const { ethers } = require('ethers');
 const mongoose = require('mongoose');
 require('dotenv').config();
@@ -27,7 +28,7 @@ const cache = new CacheService({
 
 // Middleware - Order matters!
 app.use(sanitizeInput); // Sanitize input first
-app.use(config.apiConfig.cors); // CORS
+app.use(cors(config.apiConfig.cors)); // CORS
 app.use(express.json());
 
 // Blockchain setup
@@ -766,6 +767,32 @@ async function startServer() {
 process.on('SIGINT', () => {
     logger.info('Shutting down server');
     process.exit(0);
+});
+
+// Debug endpoint - List all orders
+app.get('/api/debug/orders', async (req, res) => {
+    try {
+        const orders = await Order.find().select('orderId status createdAt');
+        res.json({
+            success: true,
+            totalOrders: orders.length,
+            orders: orders.map(o => ({
+                orderId: o.orderId,
+                status: o.status,
+                createdAt: o.createdAt
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// WebSocket endpoint stub - just return 405 Method Not Allowed
+app.all('/ws', (req, res) => {
+    res.status(405).json({
+        success: false,
+        error: 'WebSocket not supported via HTTP. Please use ws:// protocol if WebSocket is needed.'
+    });
 });
 
 // Start the server
