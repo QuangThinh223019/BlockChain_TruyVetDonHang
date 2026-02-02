@@ -34,3 +34,15 @@
 {"timestamp":"2026-02-02T11:38:14.148Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770016446655-7090"}
 {"timestamp":"2026-02-02T12:46:10.877Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
 {"timestamp":"2026-02-02T12:46:21.381Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T13:24:29.667Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:30.734Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:31.161Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:31.337Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:31.505Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:31.684Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:31.873Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:32.054Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:32.222Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:32.403Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:24:32.582Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
+{"timestamp":"2026-02-02T13:26:01.048Z","level":"WARN","message":"Endpoint not found","path":"/.well-known/appspecific/com.chrome.devtools.json","method":"GET"}

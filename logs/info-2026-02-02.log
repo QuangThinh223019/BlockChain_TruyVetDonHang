@@ -57,3 +57,29 @@
 {"timestamp":"2026-02-02T12:47:58.073Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770034944714-6750"}
 {"timestamp":"2026-02-02T12:47:58.082Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"CANCELLED"}
 {"timestamp":"2026-02-02T12:48:00.545Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770034944714-6750","status":"CANCELLED"}
+{"timestamp":"2026-02-02T13:19:03.785Z","level":"INFO","message":"Shutting down server"}
+{"timestamp":"2026-02-02T13:23:07.422Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T13:23:07.427Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T13:23:08.691Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T13:23:08.696Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T13:24:09.265Z","level":"INFO","message":"POST /api/orders/:orderId/metadata","orderId":"ORD-1770038599470-1096","metadata":{"productName":"Mic thu âm","quantity":1,"price":"10000000","totalAmount":10000000,"notes":"Tại vì sao??? yeahhhh"},"recipient":{"name":"MCK","email":"socialcqt@gmail.com","phone":"0842233252","address":"Lai VUng"}}
+{"timestamp":"2026-02-02T13:24:09.365Z","level":"INFO","message":"Order saved to MongoDB","orderId":"ORD-1770038599470-1096"}
+{"timestamp":"2026-02-02T13:24:09.370Z","level":"INFO","message":"Sending order creation email","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T13:24:12.022Z","level":"INFO","message":"Order creation email sent","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T13:27:50.050Z","level":"INFO","message":"POST /api/orders/:orderId/metadata","orderId":"ORD-1770038841981-2248","metadata":{"productName":"mci","quantity":1,"price":"1000","totalAmount":1000,"notes":""},"recipient":{"name":"MCK","email":"socialcqt@gmail.com","phone":"124","address":"qưd"}}
+{"timestamp":"2026-02-02T13:27:50.103Z","level":"INFO","message":"Order saved to MongoDB","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:27:50.104Z","level":"INFO","message":"Sending order creation email","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T13:27:52.900Z","level":"INFO","message":"Order creation email sent","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T13:28:29.255Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:28:29.300Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:28:29.301Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T13:28:32.060Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770038841981-2248","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T13:29:36.136Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:29:36.176Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:29:36.177Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"SHIPPED"}
+{"timestamp":"2026-02-02T13:29:38.772Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770038841981-2248","status":"SHIPPED"}
+{"timestamp":"2026-02-02T13:30:04.536Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:30:04.578Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:30:04.579Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"DELIVERED"}
+{"timestamp":"2026-02-02T13:30:07.296Z","level":"INFO","message":"Delivery notification sent","orderId":"ORD-1770038841981-2248"}
+{"timestamp":"2026-02-02T13:32:50.592Z","level":"INFO","message":"Shutting down server"}
