@@ -318,7 +318,9 @@ app.get('/api/orders/:orderId/metadata', async (req, res) => {
         const orderDoc = await Order.findOne({ orderId });
         
         if (!orderDoc) {
-            logger.warn('Order metadata not found', { orderId });
+            // Only log at debug level since this is expected during order creation flow
+            // (order exists on blockchain but metadata not yet saved to DB)
+            logger.debug('Order metadata not found in MongoDB', { orderId });
             return res.status(404).json({
                 success: false,
                 error: config.errorMessages.NOT_FOUND,

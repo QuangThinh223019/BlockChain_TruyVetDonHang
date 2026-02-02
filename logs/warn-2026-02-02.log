@@ -46,3 +46,18 @@
 {"timestamp":"2026-02-02T13:24:32.403Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
 {"timestamp":"2026-02-02T13:24:32.582Z","level":"WARN","message":"Endpoint not found","path":"/tracking","method":"GET"}
 {"timestamp":"2026-02-02T13:26:01.048Z","level":"WARN","message":"Endpoint not found","path":"/.well-known/appspecific/com.chrome.devtools.json","method":"GET"}
+{"timestamp":"2026-02-02T14:58:21.529Z","level":"WARN","message":"Endpoint not found","path":"/","method":"GET"}
+{"timestamp":"2026-02-02T14:58:52.930Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770044000636-7978"}
+{"timestamp":"2026-02-02T15:09:45.285Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:09:57.828Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:12.543Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:43.511Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:44.142Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:44.670Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:45.092Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:45.259Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:45.483Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:46.203Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770043800318-6241"}
+{"timestamp":"2026-02-02T15:10:49.809Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770044000636-7978"}
+{"timestamp":"2026-02-02T15:11:02.044Z","level":"WARN","message":"Order not found in MongoDB","orderId":"ORD-1770044000636-7978"}
+{"timestamp":"2026-02-02T15:11:03.550Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770044000636-7978"}
