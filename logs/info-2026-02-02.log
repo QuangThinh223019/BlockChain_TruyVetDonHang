@@ -45,3 +45,7 @@
 {"timestamp":"2026-02-02T11:37:00.705Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770031992326-7027"}
 {"timestamp":"2026-02-02T11:37:00.707Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"SHIPPED"}
 {"timestamp":"2026-02-02T11:37:03.629Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770031992326-7027","status":"SHIPPED"}
+{"timestamp":"2026-02-02T11:58:32.668Z","level":"INFO","message":"POST /api/orders/:orderId/metadata","orderId":"ORD-1770033471244-6677","metadata":{"productName":"Tài liệu","quantity":100,"price":"500000","totalAmount":50000000,"notes":""},"recipient":{"name":"Long","email":"socialcqt@gmail.com","phone":"0842233252","address":"Đại học Nam Cần Thơ"}}
+{"timestamp":"2026-02-02T11:58:32.740Z","level":"INFO","message":"Order saved to MongoDB","orderId":"ORD-1770033471244-6677"}
+{"timestamp":"2026-02-02T11:58:32.741Z","level":"INFO","message":"Sending order creation email","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T11:58:35.616Z","level":"INFO","message":"Order creation email sent","recipientEmail":"socialcqt@gmail.com"}

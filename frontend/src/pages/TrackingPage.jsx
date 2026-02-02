@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import OrderDetail from '../components/OrderDetail/OrderDetail';
+import TrackingMap from '../components/TrackingMap/TrackingMap';
 import './TrackingPage.css';
 
 const TrackingPage = () => {
@@ -33,6 +34,13 @@ const TrackingPage = () => {
         <div className="tracking-section">
           <OrderDetail orderId={orderId} onOrderIdChange={handleOrderIdChange} />
         </div>
+
+        {/* GPS Tracking Map */}
+        {orderId && (
+          <div className="tracking-map-section">
+            <TrackingMap orderId={orderId} />
+          </div>
+        )}
       </div>
     </div>
   );
