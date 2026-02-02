@@ -4,99 +4,138 @@
  */
 
 const express = require('express');
-const cors = require('cors');
 const { ethers } = require('ethers');
 const mongoose = require('mongoose');
 require('dotenv').config();
+
+// Import optimization modules
+const config = require('./config');
+const CacheService = require('./cache-service');
+const { createOrderValidation, updateStatusValidation, getOrderValidation, listOrdersValidation, handleValidationErrors, sanitizeInput } = require('./validation');
+const logger = require('./logger');
 
 const { Order } = require('./database/schemas/models');
 const { initializeEmailService, notifyOrderCreated, notifyOrderStatusUpdated, notifyOrderDelivered } = require('./email-service');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Initialize caching service
+const cache = new CacheService({
+  maxKeys: config.cacheConfig.limits.maxKeys,
+  maxMemoryMB: config.cacheConfig.limits.maxMemoryMB
+});
+
+// Middleware - Order matters!
+app.use(sanitizeInput); // Sanitize input first
+app.use(config.apiConfig.cors); // CORS
 app.use(express.json());
 
-// MongoDB setup
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/order-tracking';
-let mongoConnected = false;
-
 // Blockchain setup
-const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-const contractAddress = process.env.CONTRACT_ADDRESS;
+const provider = new ethers.JsonRpcProvider(config.blockchainConfig.rpcUrl);
+const signer = new ethers.Wallet(config.blockchainConfig.privateKey, provider);
+const contractAddress = config.blockchainConfig.contractAddress;
 
 let contract;
+let mongoConnected = false;
 
 // Initialize contract and database
 async function initializeContract() {
     try {
         const contractArtifact = require('./blockchain/artifacts/contracts/OrderTracking.sol/OrderTracking.json');
         contract = new ethers.Contract(contractAddress, contractArtifact.abi, signer);
-        console.log('✅ Smart contract initialized');
+        logger.info('Smart contract initialized', { contractAddress });
         
         // Initialize email service
         initializeEmailService();
         
-        // Connect to MongoDB
-        try {
-            await mongoose.connect(MONGODB_URI, {
-                serverSelectionTimeoutMS: 3000,
-                socketTimeoutMS: 10000,
-                connectTimeoutMS: 3000
-            });
-            mongoConnected = true;
-            console.log('✅ MongoDB connected');
-        } catch (dbError) {
-            console.warn('⚠️ MongoDB connection failed, running without database');
+        // Connect to MongoDB with retry logic
+        const maxRetries = config.databaseConfig.retry.maxAttempts;
+        let retryCount = 0;
+        let connected = false;
+
+        while (retryCount < maxRetries && !connected) {
+            try {
+                await mongoose.connect(config.databaseConfig.uri, config.databaseConfig.options);
+                mongoConnected = true;
+                connected = true;
+                logger.info('MongoDB connected successfully');
+            } catch (dbError) {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    const delayMs = config.databaseConfig.retry.delayMs * Math.pow(config.databaseConfig.retry.backoffMultiplier, retryCount - 1);
+                    logger.warn(`MongoDB connection attempt ${retryCount} failed, retrying in ${delayMs}ms`, { error: dbError.message });
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                } else {
+                    logger.warn('MongoDB connection failed after retries, running without database', { error: dbError.message });
+                }
+            }
         }
         
         return true;
     } catch (error) {
-        console.error('❌ Contract initialization failed:', error.message);
+        logger.error('Contract initialization failed', { error: error.message });
         return false;
     }
 }
 
 // ==================== API ENDPOINTS ====================
 
-// Health check
+// Health check with caching
 app.get('/api/health', async (req, res) => {
     try {
+        // Check cache first
+        const cached = cache.get('health');
+        if (cached) {
+            logger.debug('Health check from cache');
+            return res.json(cached);
+        }
+
         const blockNumber = await provider.getBlockNumber();
         const balance = await provider.getBalance(signer.address);
         const totalOrders = await contract.totalOrders();
 
-        res.json({
+        const healthData = {
             status: 'healthy',
             blockchain: {
-                network: 'Sepolia',
+                network: config.blockchainConfig.chainName,
                 blockNumber,
                 contractAddress,
                 adminBalance: ethers.formatEther(balance),
                 totalOrders: totalOrders.toString()
             },
             timestamp: new Date().toISOString()
-        });
+        };
+
+        // Cache for 5 seconds
+        cache.set('health', healthData, config.cacheConfig.ttl.blockNumber);
+        
+        logger.http('Health check', { status: 'healthy' });
+        res.json(healthData);
     } catch (error) {
+        logger.error('Health check failed', { error: error.message });
         res.status(500).json({
             status: 'error',
-            message: error.message
+            message: config.errorMessages.SERVER_ERROR
         });
     }
 });
 
-// Get system statistics
+// Get system statistics with caching
 app.get('/api/stats', async (req, res) => {
     try {
+        // Check cache first
+        const cached = cache.get('stats');
+        if (cached) {
+            logger.debug('Stats from cache');
+            return res.json(cached);
+        }
+
         const totalOrders = await contract.totalOrders();
         const network = await provider.getNetwork();
         const blockNumber = await provider.getBlockNumber();
         const balance = await provider.getBalance(signer.address);
 
-        res.json({
+        const statsData = {
             totalOrders: totalOrders.toString(),
             network: {
                 name: network.name,
@@ -107,24 +146,33 @@ app.get('/api/stats', async (req, res) => {
                 contractAddress,
                 adminAddress: signer.address,
                 adminBalance: ethers.formatEther(balance)
-            }
-        });
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        // Cache for 1 minute
+        cache.set('stats', statsData, config.cacheConfig.ttl.systemStats);
+        
+        logger.http('Statistics retrieved');
+        res.json(statsData);
     } catch (error) {
+        logger.error('Failed to get statistics', { error: error.message });
         res.status(500).json({
-            error: 'Failed to get statistics',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
 
 // Create new order
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', createOrderValidation, handleValidationErrors, async (req, res) => {
     try {
         const { orderId, productInfo } = req.body;
 
         if (!orderId || !productInfo) {
             return res.status(400).json({
-                error: 'Missing required fields: orderId, productInfo'
+                success: false,
+                error: config.errorMessages.INVALID_INPUT
             });
         }
 
@@ -143,12 +191,18 @@ app.post('/api/orders', async (req, res) => {
         
         // Send transaction
         const tx = await contract.createOrder(orderId, metadataHash, {
-            gasLimit: gasEstimate * 120n / 100n
+            gasLimit: gasEstimate * BigInt(config.blockchainConfig.gas.multiplier * 100) / BigInt(100)
         });
+
+        logger.info('Order creation transaction sent', { orderId, txHash: tx.hash });
 
         // Wait for confirmation
         const receipt = await tx.wait();
 
+        // Invalidate cache
+        cache.delete('stats');
+
+        logger.info('Order created successfully', { orderId, blockNumber: receipt.blockNumber });
         res.json({
             success: true,
             orderId,
@@ -160,21 +214,30 @@ app.post('/api/orders', async (req, res) => {
         });
 
     } catch (error) {
+        logger.error('Failed to create order', { error: error.message });
         res.status(500).json({
-            error: 'Failed to create order',
-            message: error.message
+            success: false,
+            error: config.errorMessages.TRANSACTION_FAILED
         });
     }
 });
 
-// Get order by ID
-app.get('/api/orders/:orderId', async (req, res) => {
+// Get order by ID with caching
+app.get('/api/orders/:orderId', getOrderValidation, handleValidationErrors, async (req, res) => {
     try {
         const { orderId } = req.params;
         
+        // Check cache first
+        const cacheKey = `order:${orderId}`;
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            logger.debug('Order retrieved from cache', { orderId });
+            return res.json(cached);
+        }
+        
         const order = await contract.getOrder(orderId);
         
-        res.json({
+        const orderData = {
             orderId: order.orderId,
             adminAddress: order.adminAddress,
             createdAt: new Date(Number(order.createdAt) * 1000).toISOString(),
@@ -182,19 +245,28 @@ app.get('/api/orders/:orderId', async (req, res) => {
             metadataHash: order.metadataHash,
             lastUpdated: new Date(Number(order.lastUpdated) * 1000).toISOString(),
             isActive: order.isActive
-        });
+        };
+
+        // Cache for 1 minute
+        cache.set(cacheKey, orderData, config.cacheConfig.ttl.orderData);
+        
+        logger.http('Order retrieved', { orderId });
+        res.json(orderData);
 
     } catch (error) {
         if (error.message.includes('Order does not exist')) {
+            logger.warn('Order not found', { orderId: req.params.orderId });
             return res.status(404).json({
-                error: 'Order not found',
+                success: false,
+                error: config.errorMessages.NOT_FOUND,
                 orderId: req.params.orderId
             });
         }
         
+        logger.error('Failed to get order', { error: error.message, orderId: req.params.orderId });
         res.status(500).json({
-            error: 'Failed to get order',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
@@ -206,8 +278,8 @@ app.get('/api/orders/:orderId/metadata', async (req, res) => {
         
         if (!mongoConnected) {
             return res.status(503).json({
-                error: 'Database not available',
-                message: 'MongoDB connection is not established'
+                success: false,
+                error: 'Database not available'
             });
         }
         
@@ -215,12 +287,15 @@ app.get('/api/orders/:orderId/metadata', async (req, res) => {
         const orderDoc = await Order.findOne({ orderId });
         
         if (!orderDoc) {
+            logger.warn('Order metadata not found', { orderId });
             return res.status(404).json({
-                error: 'Order metadata not found',
+                success: false,
+                error: config.errorMessages.NOT_FOUND,
                 orderId
             });
         }
         
+        logger.http('Order metadata retrieved', { orderId });
         res.json({
             orderId: orderDoc.orderId,
             metadata: orderDoc.metadata,
@@ -236,9 +311,10 @@ app.get('/api/orders/:orderId/metadata', async (req, res) => {
         });
 
     } catch (error) {
+        logger.error('Failed to get order metadata', { error: error.message, orderId: req.params.orderId });
         res.status(500).json({
-            error: 'Failed to get order metadata',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
@@ -249,14 +325,13 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
         const { orderId } = req.params;
         const { metadata, recipient, sender, txHash } = req.body;
         
-        console.log(`📥 POST /api/orders/${orderId}/metadata`);
-        console.log('Request body:', { metadata, recipient, sender, txHash });
+        logger.info('POST /api/orders/:orderId/metadata', { orderId, metadata, recipient });
         
         if (!mongoConnected) {
-            console.warn('⚠️ MongoDB not connected');
+            logger.warn('MongoDB not connected');
             return res.status(503).json({
-                error: 'Database not available',
-                message: 'MongoDB connection is not established'
+                success: false,
+                error: 'Database not available'
             });
         }
         
@@ -293,7 +368,11 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
         
-        console.log(`✅ Order saved to MongoDB:`, orderDoc.orderId);
+        logger.info('Order saved to MongoDB', { orderId });
+        
+        // Invalidate cache
+        cache.delete(`order:${orderId}`);
+        cache.delete('stats');
         
         // Send email notification if recipient email is provided
         if (recipient?.email || metadata?.recipientEmail) {
@@ -310,47 +389,42 @@ app.post('/api/orders/:orderId/metadata', async (req, res) => {
                 createdAt: new Date().toISOString()
             };
             
-            console.log(`📧 Sending order creation email to ${recipientEmail}`);
+            logger.info('Sending order creation email', { recipientEmail });
             // Send email asynchronously (don't wait for it)
             notifyOrderCreated(recipientEmail, emailData).then(() => {
-                console.log(`✅ Order creation email sent to ${recipientEmail}`);
+                logger.info('Order creation email sent', { recipientEmail });
             }).catch(err => {
-                console.error('❌ Failed to send order creation email:', err.message);
+                logger.error('Failed to send order creation email', { error: err.message, recipientEmail });
             });
         }
         
         res.json({
             success: true,
             orderId,
-            message: 'Metadata saved successfully',
+            message: config.successMessages.DATA_SAVED,
             data: orderDoc
         });
 
     } catch (error) {
-        console.error('❌ Error in POST metadata:', error.message);
+        logger.error('Error in POST metadata', { error: error.message, orderId: req.params.orderId });
         res.status(500).json({
-            error: 'Failed to save order metadata',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
 
-// Update order status - Only for email notification, blockchain already updated by frontend
-app.put('/api/orders/:orderId/status', async (req, res) => {
+// Update order status - Only for email notification
+app.put('/api/orders/:orderId/status', updateStatusValidation, handleValidationErrors, async (req, res) => {
     try {
         const { orderId } = req.params;
         const { status, details } = req.body;
 
-        if (!status) {
-            return res.status(400).json({
-                error: 'Missing required field: status'
-            });
-        }
-
-        // Valid statuses
         const validStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'CREATED', 'CONFIRMED'];
         if (!validStatuses.includes(status)) {
+            logger.warn('Invalid status provided', { status, orderId });
             return res.status(400).json({
+                success: false,
                 error: 'Invalid status',
                 validStatuses
             });
@@ -359,22 +433,23 @@ app.put('/api/orders/:orderId/status', async (req, res) => {
         // Send email notification if MongoDB is connected
         if (mongoConnected) {
             try {
-                console.log(`📧 Searching for order: ${orderId}`);
+                logger.info('Searching for order in database', { orderId });
                 const orderDoc = await Order.findOne({ orderId });
                 
                 if (orderDoc) {
-                    console.log(`✅ Order found in MongoDB`);
-                    console.log(`📧 Recipient email: ${orderDoc.recipient?.email}`);
+                    logger.info('Order found in MongoDB', { orderId });
                     
                     if (orderDoc.recipient?.email) {
+                        logger.info('Sending status update email', { email: orderDoc.recipient.email, status });
+                        
                         // Map status string to number for email template
                         const statusMap = {
                             'CREATED': '0',
                             'PROCESSING': '1',
-                            'CONFIRMED': '1',  // Confirmed
-                            'SHIPPED': '2',      // Shipping
-                            'DELIVERED': '3',    // Delivered
-                            'CANCELLED': '4'     // Cancelled
+                            'CONFIRMED': '1',
+                            'SHIPPED': '2',
+                            'DELIVERED': '3',
+                            'CANCELLED': '4'
                         };
                         
                         const emailData = {
@@ -388,36 +463,36 @@ app.put('/api/orders/:orderId/status', async (req, res) => {
                             notes: details
                         };
                         
-                        console.log(`📧 Preparing email with status: ${emailData.status} (${status})`);
-                        
                         // Send email asynchronously
                         if (status === 'DELIVERED') {
-                            console.log(`📧 Sending delivery notification...`);
                             emailData.deliveredAt = new Date().toISOString();
                             notifyOrderDelivered(orderDoc.recipient.email, emailData).then(() => {
-                                console.log(`✅ Delivery notification sent to ${orderDoc.recipient.email}`);
+                                logger.info('Delivery notification sent', { orderId });
                             }).catch(err => {
-                                console.error('❌ Failed to send delivery notification:', err.message);
+                                logger.error('Failed to send delivery notification', { error: err.message, orderId });
                             });
                         } else {
-                            console.log(`📧 Sending status update email...`);
                             notifyOrderStatusUpdated(orderDoc.recipient.email, emailData).then(() => {
-                                console.log(`✅ Status update email sent to ${orderDoc.recipient.email}`);
+                                logger.info('Status update email sent', { orderId, status });
                             }).catch(err => {
-                                console.error('❌ Failed to send status update email:', err.message);
+                                logger.error('Failed to send status update email', { error: err.message, orderId });
                             });
                         }
+
+                        // Invalidate cache
+                        cache.delete(`order:${orderId}`);
+                        cache.delete('stats');
                     } else {
-                        console.warn(`⚠️ No recipient email found for order ${orderId}`);
+                        logger.warn('No recipient email found for order', { orderId });
                     }
                 } else {
-                    console.warn(`⚠️ Order not found in MongoDB: ${orderId}`);
+                    logger.warn('Order not found in MongoDB', { orderId });
                 }
             } catch (emailError) {
-                console.error('❌ Error sending status update email:', emailError.message);
+                logger.error('Error sending status update email', { error: emailError.message, orderId });
             }
         } else {
-            console.warn('⚠️ MongoDB not connected, email not sent');
+            logger.warn('MongoDB not connected, email not sent', { orderId });
         }
 
         res.json({
@@ -425,13 +500,14 @@ app.put('/api/orders/:orderId/status', async (req, res) => {
             orderId,
             newStatus: status,
             details,
-            message: 'Status update notification sent'
+            message: config.successMessages.ORDER_UPDATED
         });
 
     } catch (error) {
+        logger.error('Failed to process status update', { error: error.message, orderId: req.params.orderId });
         res.status(500).json({
-            error: 'Failed to process status update',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
@@ -446,12 +522,19 @@ app.delete('/api/orders/:orderId', async (req, res) => {
         
         // Send transaction
         const tx = await contract.cancelOrder(orderId, {
-            gasLimit: gasEstimate * 120n / 100n
+            gasLimit: gasEstimate * BigInt(config.blockchainConfig.gas.multiplier * 100) / BigInt(100)
         });
+
+        logger.info('Order cancellation transaction sent', { orderId, txHash: tx.hash });
 
         // Wait for confirmation
         const receipt = await tx.wait();
 
+        // Invalidate cache
+        cache.delete(`order:${orderId}`);
+        cache.delete('stats');
+
+        logger.info('Order cancelled successfully', { orderId });
         res.json({
             success: true,
             orderId,
@@ -462,9 +545,10 @@ app.delete('/api/orders/:orderId', async (req, res) => {
         });
 
     } catch (error) {
+        logger.error('Failed to cancel order', { error: error.message, orderId: req.params.orderId });
         res.status(500).json({
-            error: 'Failed to cancel order',
-            message: error.message
+            success: false,
+            error: config.errorMessages.TRANSACTION_FAILED
         });
     }
 });
@@ -479,6 +563,8 @@ app.get('/api/events', async (req, res) => {
         const endBlock = toBlock ? parseInt(toBlock) : currentBlock;
 
         let events = [];
+
+        logger.info('Fetching contract events', { startBlock, endBlock });
 
         // Get OrderCreated events
         const orderCreatedFilter = contract.filters.OrderCreated();
@@ -531,7 +617,9 @@ app.get('/api/events', async (req, res) => {
         // Sort by block number (newest first)
         events.sort((a, b) => b.blockNumber - a.blockNumber);
 
+        logger.http('Events retrieved', { total: events.length });
         res.json({
+            success: true,
             events,
             total: events.length,
             fromBlock: startBlock,
@@ -539,9 +627,10 @@ app.get('/api/events', async (req, res) => {
         });
 
     } catch (error) {
+        logger.error('Failed to get events', { error: error.message });
         res.status(500).json({
-            error: 'Failed to get events',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
@@ -554,7 +643,9 @@ app.get('/api/admin/:address', async (req, res) => {
         const isAuthorized = await contract.isAdminAuthorized(address);
         const isOwner = await contract.owner() === address;
 
+        logger.http('Admin status retrieved', { address, isOwner, isAuthorized });
         res.json({
+            success: true,
             address,
             isAuthorized,
             isOwner,
@@ -562,9 +653,10 @@ app.get('/api/admin/:address', async (req, res) => {
         });
 
     } catch (error) {
+        logger.error('Failed to get admin status', { error: error.message, address: req.params.address });
         res.status(500).json({
-            error: 'Failed to get admin status',
-            message: error.message
+            success: false,
+            error: config.errorMessages.SERVER_ERROR
         });
     }
 });
@@ -577,7 +669,8 @@ app.post('/api/admin/:address', async (req, res) => {
 
         if (typeof authorized !== 'boolean') {
             return res.status(400).json({
-                error: 'Missing or invalid field: authorized (boolean required)'
+                success: false,
+                error: config.errorMessages.INVALID_INPUT
             });
         }
 
@@ -586,12 +679,15 @@ app.post('/api/admin/:address', async (req, res) => {
         
         // Send transaction
         const tx = await contract.setAdminAuthorization(address, authorized, {
-            gasLimit: gasEstimate * 120n / 100n
+            gasLimit: gasEstimate * BigInt(config.blockchainConfig.gas.multiplier * 100) / BigInt(100)
         });
+
+        logger.info('Admin authorization transaction sent', { address, authorized, txHash: tx.hash });
 
         // Wait for confirmation
         const receipt = await tx.wait();
 
+        logger.info('Admin authorization updated', { address, authorized });
         res.json({
             success: true,
             address,
@@ -602,25 +698,28 @@ app.post('/api/admin/:address', async (req, res) => {
         });
 
     } catch (error) {
+        logger.error('Failed to set admin authorization', { error: error.message, address: req.params.address });
         res.status(500).json({
-            error: 'Failed to set admin authorization',
-            message: error.message
+            success: false,
+            error: config.errorMessages.TRANSACTION_FAILED
         });
     }
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    logger.error('Unhandled error', { error: err.message, stack: err.stack });
     res.status(500).json({
-        error: 'Internal server error',
-        message: err.message
+        success: false,
+        error: config.errorMessages.SERVER_ERROR
     });
 });
 
 // 404 handler
 app.use((req, res) => {
+    logger.warn('Endpoint not found', { path: req.path, method: req.method });
     res.status(404).json({
+        success: false,
         error: 'Endpoint not found',
         path: req.path
     });
@@ -629,44 +728,52 @@ app.use((req, res) => {
 // ==================== SERVER STARTUP ====================
 
 async function startServer() {
-    console.log('🚀 STARTING BLOCKCHAIN ORDER TRACKING API SERVER');
-    console.log('=' .repeat(60));
+    logger.info('STARTING BLOCKCHAIN ORDER TRACKING API SERVER');
 
     // Initialize contract
     if (!await initializeContract()) {
-        console.error('❌ Failed to initialize contract');
+        logger.error('Failed to initialize contract');
         process.exit(1);
     }
 
     // Start server
-    app.listen(PORT, () => {
-        console.log('✅ Server started successfully');
-        console.log(`🌐 Server running at: http://localhost:${PORT}`);
-        console.log(`📍 Contract Address: ${contractAddress}`);
-        console.log(`👤 Admin Address: ${signer.address}`);
+    app.listen(config.serverConfig.port, () => {
+        logger.info('Server started successfully', {
+            port: config.serverConfig.port,
+            contractAddress,
+            adminAddress: signer.address
+        });
+        
+        console.log('\n🌐 Server running at: http://localhost:' + config.serverConfig.port);
+        console.log('📍 Contract Address: ' + contractAddress);
+        console.log('👤 Admin Address: ' + signer.address);
         console.log('\n📋 Available Endpoints:');
-        console.log('   GET  /api/health           - Health check');
-        console.log('   GET  /api/stats            - System statistics');
-        console.log('   POST /api/orders           - Create new order');
-        console.log('   GET  /api/orders/:id       - Get order by ID');
-        console.log('   PUT  /api/orders/:id/status - Update order status');
-        console.log('   DEL  /api/orders/:id       - Cancel order');
-        console.log('   GET  /api/events           - Get blockchain events');
-        console.log('   GET  /api/admin/:address   - Get admin status');
-        console.log('   POST /api/admin/:address   - Set admin authorization');
-        console.log('\n🎯 Ready to accept requests!');
+        console.log('   GET  /api/health              - Health check');
+        console.log('   GET  /api/stats               - System statistics');
+        console.log('   POST /api/orders              - Create new order');
+        console.log('   GET  /api/orders/:id          - Get order by ID');
+        console.log('   POST /api/orders/:id/metadata - Save order metadata');
+        console.log('   PUT  /api/orders/:id/status   - Update order status');
+        console.log('   DEL  /api/orders/:id          - Cancel order');
+        console.log('   GET  /api/events              - Get blockchain events');
+        console.log('   GET  /api/admin/:address      - Get admin status');
+        console.log('   POST /api/admin/:address      - Set admin authorization');
+        console.log('\n✅ Ready to accept requests!\n');
     });
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down server...');
+    logger.info('Shutting down server');
     process.exit(0);
 });
 
 // Start the server
 if (require.main === module) {
-    startServer().catch(console.error);
+    startServer().catch(err => {
+        logger.error('Failed to start server', { error: err.message });
+        process.exit(1);
+    });
 }
 
 module.exports = app;
