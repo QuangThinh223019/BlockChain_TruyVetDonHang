@@ -116,8 +116,8 @@ const Dashboard = () => {
         // Sắp xếp theo thời gian tạo mới nhất
         ordersWithStatus.sort((a, b) => b.createdAt - a.createdAt);
 
-        // Lấy 5 đơn gần nhất
-        const recent = ordersWithStatus.slice(0, 5);
+        // Hiển thị tất cả các đơn (không giới hạn)
+        const recent = ordersWithStatus;
 
         setStats(orderStats);
         setRecentOrders(recent);
