@@ -107,3 +107,21 @@
 {"timestamp":"2026-02-02T15:14:48.730Z","level":"INFO","message":"Sending order creation email","recipientEmail":"socialcqt@gmail.com"}
 {"timestamp":"2026-02-02T15:14:52.024Z","level":"INFO","message":"Order creation email sent","recipientEmail":"socialcqt@gmail.com"}
 {"timestamp":"2026-02-02T15:16:21.394Z","level":"INFO","message":"Shutting down server"}
+{"timestamp":"2026-02-02T15:29:03.737Z","level":"INFO","message":"STARTING BLOCKCHAIN ORDER TRACKING API SERVER"}
+{"timestamp":"2026-02-02T15:29:03.741Z","level":"INFO","message":"Smart contract initialized","contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8"}
+{"timestamp":"2026-02-02T15:29:05.135Z","level":"INFO","message":"MongoDB connected successfully"}
+{"timestamp":"2026-02-02T15:29:05.145Z","level":"INFO","message":"Server started successfully","port":3000,"contractAddress":"0x5663b4AF89cFBFf92A29F8cb53516B705eF055C8","adminAddress":"0x0aCdc16d8fB5ac46cC309Cbe6b235BC481c91B4a"}
+{"timestamp":"2026-02-02T15:30:05.515Z","level":"INFO","message":"POST /api/orders/:orderId/metadata","orderId":"ORD-1770046150259-3836","metadata":{"productName":"Áo lonely stonie","quantity":1,"price":"420000","totalAmount":420000,"notes":""},"recipient":{"name":"Nghiêm Vũ Hoàng Long","email":"socialcqt@gmail.com","phone":"0842233252","address":"Hà Nội"}}
+{"timestamp":"2026-02-02T15:30:05.608Z","level":"INFO","message":"Order saved to MongoDB","orderId":"ORD-1770046150259-3836"}
+{"timestamp":"2026-02-02T15:30:05.612Z","level":"INFO","message":"Sending order creation email","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T15:30:08.289Z","level":"INFO","message":"Order creation email sent","recipientEmail":"socialcqt@gmail.com"}
+{"timestamp":"2026-02-02T15:30:42.946Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770046150259-3836"}
+{"timestamp":"2026-02-02T15:30:42.995Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770046150259-3836"}
+{"timestamp":"2026-02-02T15:30:43.052Z","level":"INFO","message":"Order status updated in MongoDB","orderId":"ORD-1770046150259-3836","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T15:30:43.058Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T15:30:45.873Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770046150259-3836","status":"CONFIRMED"}
+{"timestamp":"2026-02-02T15:32:06.914Z","level":"INFO","message":"Searching for order in database","orderId":"ORD-1770046150259-3836"}
+{"timestamp":"2026-02-02T15:32:06.955Z","level":"INFO","message":"Order found in MongoDB","orderId":"ORD-1770046150259-3836"}
+{"timestamp":"2026-02-02T15:32:07.000Z","level":"INFO","message":"Order status updated in MongoDB","orderId":"ORD-1770046150259-3836","status":"SHIPPED"}
+{"timestamp":"2026-02-02T15:32:07.001Z","level":"INFO","message":"Sending status update email","email":"socialcqt@gmail.com","status":"SHIPPED"}
+{"timestamp":"2026-02-02T15:32:09.800Z","level":"INFO","message":"Status update email sent","orderId":"ORD-1770046150259-3836","status":"SHIPPED"}

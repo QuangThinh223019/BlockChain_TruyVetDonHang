@@ -472,6 +472,16 @@ app.put('/api/orders/:orderId/status', updateStatusValidation, handleValidationE
                 if (orderDoc) {
                     logger.info('Order found in MongoDB', { orderId });
                     
+                    // Update status in MongoDB
+                    await Order.findOneAndUpdate(
+                        { orderId },
+                        { 
+                            status: status,
+                            updatedAt: new Date()
+                        }
+                    );
+                    logger.info('Order status updated in MongoDB', { orderId, status });
+                    
                     if (orderDoc.recipient?.email) {
                         logger.info('Sending status update email', { email: orderDoc.recipient.email, status });
                         
