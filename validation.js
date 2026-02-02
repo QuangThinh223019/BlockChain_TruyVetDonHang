@@ -106,19 +106,20 @@ const createOrderValidation = [
 ];
 
 const updateStatusValidation = [
-  param('id')
+  param('orderId')
     .trim()
     .notEmpty().withMessage('Order ID is required')
     .custom(validateOrderId),
   
   body('status')
     .notEmpty().withMessage('Status is required')
-    .isInt({ min: 0, max: 4 }).withMessage('Invalid status value')
-    .custom(validateStatus)
+    .isString().withMessage('Status must be a string')
+    .isIn(['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'CREATED', 'CONFIRMED'])
+    .withMessage('Invalid status value')
 ];
 
 const getOrderValidation = [
-  param('id')
+  param('orderId')
     .trim()
     .notEmpty().withMessage('Order ID is required')
     .custom(validateOrderId)

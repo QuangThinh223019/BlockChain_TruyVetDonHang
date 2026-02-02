@@ -200,6 +200,36 @@ app.post('/api/orders', createOrderValidation, handleValidationErrors, async (re
         // Wait for confirmation
         const receipt = await tx.wait();
 
+        // Save order to MongoDB
+        if (mongoConnected) {
+            try {
+                const newOrder = new Order({
+                    orderId,
+                    adminAddress: signer.address,
+                    status: 'CREATED',
+                    metadata: {
+                        productName: productInfo?.productName,
+                        productDescription: productInfo?.productDescription,
+                        quantity: productInfo?.quantity,
+                        price: productInfo?.price,
+                        totalAmount: productInfo?.totalAmount,
+                        sku: productInfo?.sku,
+                        category: productInfo?.category
+                    },
+                    recipient: productInfo?.recipient,
+                    sender: productInfo?.sender,
+                    blockchainHash: tx.hash,
+                    metadataHash
+                });
+                
+                await newOrder.save();
+                logger.info('Order saved to MongoDB', { orderId });
+            } catch (dbError) {
+                logger.warn('Failed to save order to MongoDB', { orderId, error: dbError.message });
+                // Don't fail the entire request if DB save fails
+            }
+        }
+
         // Invalidate cache
         cache.delete('stats');
 

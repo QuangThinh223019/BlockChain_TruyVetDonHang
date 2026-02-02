@@ -25,3 +25,7 @@
 {"timestamp":"2026-02-02T11:27:10.260Z","level":"WARN","message":"Endpoint not found","path":"/.well-known/appspecific/com.chrome.devtools.json","method":"GET"}
 {"timestamp":"2026-02-02T11:27:10.290Z","level":"WARN","message":"Endpoint not found","path":"/static/js/bundle.js.map","method":"GET"}
 {"timestamp":"2026-02-02T11:27:51.786Z","level":"WARN","message":"Endpoint not found","path":"/ws","method":"GET"}
+{"timestamp":"2026-02-02T11:30:43.975Z","level":"WARN","message":"Order metadata not found","orderId":"ORD-1770020800408-3729"}
+{"timestamp":"2026-02-02T11:31:10.779Z","level":"WARN","message":"Endpoint not found","path":"/manifest.json","method":"GET"}
+{"timestamp":"2026-02-02T11:31:10.791Z","level":"WARN","message":"Endpoint not found","path":"/.well-known/appspecific/com.chrome.devtools.json","method":"GET"}
+{"timestamp":"2026-02-02T11:31:10.888Z","level":"WARN","message":"Endpoint not found","path":"/static/js/bundle.js.map","method":"GET"}
