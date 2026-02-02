@@ -85,10 +85,14 @@ export const debounce = (func, wait = 300) => {
 export const formatError = (error) => {
   if (!error) return 'Đã xảy ra lỗi không xác định';
   
-  // MetaMask errors
-  if (error.code === 4001) {
-    return 'Người dùng đã từ chối giao dịch';
+  // MetaMask errors - User rejection (kiểm tra trước các lỗi khác)
+  if (error.code === 4001 || error.code === 'ACTION_REJECTED' || error.reason === 'rejected') {
+    return 'Bạn đã hủy giao dịch trên MetaMask';
   }
+  if (error.message?.includes('user rejected') || error.message?.includes('User denied')) {
+    return 'Bạn đã hủy giao dịch trên MetaMask';
+  }
+  
   if (error.code === -32002) {
     return 'Vui lòng mở MetaMask và kết nối ví';
   }
@@ -101,13 +105,19 @@ export const formatError = (error) => {
     return 'Lỗi kết nối mạng. Vui lòng kiểm tra lại';
   }
   
-  // Gas errors
-  if (error.message?.includes('insufficient funds') || error.message?.includes('gas')) {
+  // Gas errors - nhưng KHÔNG phải user rejection
+  if (error.message?.includes('insufficient funds') || 
+      (error.message?.includes('gas') && !error.message?.includes('rejected'))) {
     return 'Không đủ ETH để trả phí gas. Vui lòng nạp thêm ETH vào ví';
   }
   
-  // Contract errors
+  // Contract errors - execution reverted
   if (error.message?.includes('execution reverted')) {
+    // Nếu lỗi là "Order does not exist" - giữ nguyên message gốc
+    if (error.message?.includes('Order does not exist') || error.message?.includes('does not exist')) {
+      return error.message; // Trả về message gốc
+    }
+    // Các lỗi khác
     return 'Giao dịch bị từ chối bởi smart contract. Có thể mã đơn hàng đã tồn tại';
   }
   

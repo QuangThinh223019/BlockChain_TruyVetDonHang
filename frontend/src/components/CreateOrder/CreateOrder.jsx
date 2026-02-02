@@ -73,16 +73,21 @@ const CreateOrder = ({ onOrderCreated }) => {
       // Kiểm tra mã đơn hàng đã tồn tại chưa trước khi gửi transaction
       try {
         const existingOrder = await getOrder(orderId);
+        // Nếu tìm thấy đơn hàng → Đã tồn tại
         if (existingOrder && existingOrder.orderId) {
           alert(`❌ Mã đơn hàng "${orderId}" đã tồn tại trên blockchain!\n\nVui lòng sử dụng mã khác hoặc bấm "Tạo tự động" để tạo mã mới.`);
           return;
         }
       } catch (err) {
-        // Nếu lỗi "không tồn tại" thì OK, có thể tiếp tục tạo đơn
-        if (!err.message.includes('không tồn tại') && !err.message.includes('does not exist')) {
+        // Nếu lỗi chứa "does not exist" hoặc "không tồn tại" → Đơn chưa tồn tại → OK, tiếp tục tạo đơn
+        const errorMessage = err.message || '';
+        if (errorMessage.includes('does not exist') || errorMessage.includes('không tồn tại')) {
+          // Đơn chưa tồn tại - đây là điều bình thường, không làm gì, tiếp tục tạo đơn
+          console.log('✅ Order ID available, proceeding to create...');
+        } else {
+          // Lỗi khác (network, RPC, etc.) - cảnh báo nhưng vẫn cho phép tiếp tục
           console.error('Error checking order existence:', err);
-          // Nếu lỗi khác (không phải "không tồn tại"), hiển thị warning nhưng vẫn cho phép tiếp tục
-          if (!window.confirm(`⚠️ Không thể kiểm tra mã đơn hàng: ${err.message}\n\nBạn có muốn tiếp tục tạo đơn?`)) {
+          if (!window.confirm(`⚠️ Không thể kiểm tra mã đơn hàng: ${errorMessage}\n\nBạn có muốn tiếp tục tạo đơn?`)) {
             return;
           }
         }
@@ -361,12 +366,6 @@ const CreateOrder = ({ onOrderCreated }) => {
           {isVerifying ? '⏳ Đang xác nhận trên blockchain...' : loading ? '⏳ Đang xử lý...' : '✨ Tạo Đơn Hàng'}
         </button>
       </form>
-
-      {error && (
-        <div className="message error-message">
-          ❌ {error}
-        </div>
-      )}
 
       {successMessage && (
         <div className="message success-message">
